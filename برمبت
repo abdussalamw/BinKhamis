@@ -1,0 +1,2850 @@
+إدارة حلقات تحفيظ القرآن الكريم
+
+وثيقة مواصفات تقنية شاملة للمطورين والمساعدين الذكيين
+
+# 🎯 مواصفات مشروع: نظام إدارة حلقات تحفيظ القرآن الكريم
+
+
+
+## 📌 معلومات المشروع الأساسية
+
+| البند | القيمة |
+
+|-------|--------|
+
+| **اسم المشروع** | Quran Circle Management System (QCMS) |
+
+| **نوع النظام** | ويب تطبيقي مؤسسي (Web Application) |
+
+| **الجمهور المستهدف** | إداريو الجمعيات، معلمو الحلقات، الطلاب، أولياء الأمور |
+
+| **اللغة الأساسية** | العربية (مع دعم كامل لـ RTL) |
+
+| **طريقة النشر** | Docker + Cloud/VPS |
+
+| **رخصة المشروع** | خاصة / مؤسسية |
+
+
+
+---
+
+
+
+## 🎯 الهدف العام
+
+أنت خبير في تطوير أنظمة الويب المؤسسية باستخدام أحدث الممارسات. مهمتك بناء نظام متكامل لإدارة حلقات تحفيظ القرآن الكريم بناءً على ملفات إكسل موجودة مسبقاً، مع تطبيق أعلى معايير الأمان، الأداء، وقابلية التوسع.
+
+
+
+---
+
+
+
+## 🛠️ المكدس التقني المطلوب (إلزامي)
+
+
+
+| الطبقة | التقنية | الإصدار / الملاحظات |
+
+|--------|---------|-------------------|
+
+| **الواجهة الأمامية** | Next.js + TypeScript + Tailwind CSS | 14+ مع App Router |
+
+| **إطار الواجهة** | TailAdmin (نسخة Next.js) | https://tailadmin.com/ |
+
+| **الخلفية** | Laravel (API Only Mode) | 10+ مع PHP 8.2+ |
+
+| **قاعدة البيانات** | PostgreSQL | 15+ مع extensions: `uuid-ossp`, `pgcrypto`, `pg_trgm` |
+
+| **المصادقة** | Laravel Sanctum + NextAuth.js | Multi-guard + JWT |
+
+| **إدارة الصلاحيات** | spatie/laravel-permission | Roles: `super_admin`, `admin`, `teacher`, `student`, `parent` |
+
+| **معالجة الإكسل** | maatwebsite/excel | مع Validation و Batch Insert |
+
+| **إدارة الملفات** | spatie/laravel-medialibrary | للصور والمستندات |
+
+| **الوقت الفعلي** | Laravel Reverb أو Pusher | للإشعارات المباشرة |
+
+| **الاختبار** | Pest (Laravel) + Vitest (Next.js) | تغطية >80% |
+
+| **التوثيق** | Scribe أو Swagger | توثيق تلقائي للـ API |
+
+| **النشر** | Docker + docker-compose | جاهز للإنتاج |
+
+
+
+---
+
+
+
+## 📥 المرحلة 1: تحليل واستيراد البيانات من ملفات الإكسل
+
+
+
+### 📁 الملفات المتوقعة كمدخلات:
+
+📦 data-import/ ├── students.xlsx # الاسم، الجوال، تاريخ الميلاد، الجنس، ولي الأمر، مستوى الحفظ، صورة ├── circles.xlsx # اسم الحلقة، الموقع، الجدول، المعلم، السعة ├── attendance.xlsx # التاريخ، الطالب، حالة الحضور، ملاحظات └── progress.xlsx # الطالب، السورة، من آية، إلى آية، التاريخ، التقييم
+
+
+
+### ✅ المطلوب تنفيذياً في Laravel:
+
+
+
+1. **إنشاء Artisan Command مخصص:**
+
+```bash
+
+php artisan make:command ImportQuranData
+
+# الاستخدام: php artisan import:quran-data --file=students.xlsx --type=students
+
+تنفيذ Classes للاستيراد باستخدام maatwebsite/excel:
+
+// مثال: app/Excel/Imports/StudentsImport.php
+
+class StudentsImport implements WithMapping, WithValidation, WithBatchInserts, WithHeadingRow
+
+{
+
+    public function map($row): array { /* ... */ }
+
+    public function rules(): array { /* ... */ }
+
+    public function batchSize(): int { return 100; }
+
+    // تطبيق منطق Upsert لتحديث الموجود وإضافة الجديد
+
+}
+
+
+
+معايير الجودة للاستيراد:
+
+التحقق من صحة البيانات قبل الإدخال (Validation)
+
+معالجة الأخطاء وحفظها في ملف error_log.json
+
+دعم التحديث الشرطي (Upsert) بناءً على phone أو national_id
+
+حفظ نسخة من الملف الأصلي في storage/app/imports/ مع ربطه بالسجل
+
+إرجاع تقرير مفصل: {added: X, updated: Y, errors: Z, file_path: "..."}
+
+واجهة رفع الملفات في Next.js:
+
+مكون <FileImporter type="students" /> يدعم السحب والإفلات
+
+معاينة البيانات قبل التأكيد (Preview Table)
+
+شريط تقدم (Progress Bar) أثناء المعالجة
+
+
+
+🗄️ المرحلة 2: تصميم هيكل قاعدة البيانات (PostgreSQL)
+
+🔑 المبادئ التصميمية:
+
+استخدام UUID كمفاتيح أساسية لجميع الجداول
+
+تفعيل Soft Deletes للجداول القابلة للحذف المنطقي
+
+استخدام JSONB للبيانات المرنة (الجداول، الإعدادات، البيانات الإضافية)
+
+إضافة فهارس (Indexes) للحقول المستخدمة في البحث والفرز
+
+📐 مخطط الجداول الأساسي:
+
+1️⃣ جدول users (المستخدمون - جميع الأدوار)
+
+
+
+CREATE TABLE users (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    name VARCHAR(100) NOT NULL,
+
+    email VARCHAR(255) UNIQUE NULL,
+
+    phone VARCHAR(20) UNIQUE NOT NULL,
+
+    password VARCHAR(255) NOT NULL,
+
+    role VARCHAR(30) CHECK (role IN ('super_admin','admin','teacher','student','parent')),
+
+    avatar VARCHAR(255) NULL,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    last_login_at TIMESTAMP NULL,
+
+    email_verified_at TIMESTAMP NULL,
+
+    remember_token VARCHAR(100) NULL,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    deleted_at TIMESTAMP NULL
+
+);
+
+
+
+CREATE INDEX idx_users_phone ON users(phone);
+
+CREATE INDEX idx_users_role ON users(role) WHERE is_active = TRUE;
+
+
+
+2️⃣ جدول profiles (البيانات التفصيلية حسب الدور)
+
+CREATE TABLE profiles (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+
+    type VARCHAR(20) CHECK (type IN ('student','teacher','parent')),
+
+    
+
+    -- حقول مشتركة
+
+    birth_date DATE NULL,
+
+    gender VARCHAR(1) CHECK (gender IN ('M','F')) NULL,
+
+    address TEXT NULL,
+
+    
+
+    -- حقول خاصة بالطالب
+
+    current_level VARCHAR(50) NULL, -- 'juz_30', 'juz_29-30', 'full_quran'
+
+    memorization_method VARCHAR(30) NULL, -- 'oral', 'written', 'mixed'
+
+    parent_id UUID NULL REFERENCES users(id),
+
+    
+
+    -- حقول خاصة بالمعلم
+
+    specialization VARCHAR(100) NULL,
+
+    hire_date DATE NULL,
+
+    bio TEXT NULL,
+
+    
+
+    -- حقول خاصة بولي الأمر
+
+    relation VARCHAR(20) CHECK (relation IN ('father','mother','guardian')) NULL,
+
+    emergency_contact VARCHAR(20) NULL,
+
+    
+
+    -- بيانات مرنة إضافية
+
+    metadata JSONB DEFAULT '{}'::jsonb,
+
+    
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW()
+
+);
+
+
+
+CREATE INDEX idx_profiles_user ON profiles(user_id);
+
+CREATE INDEX idx_profiles_parent ON profiles(parent_id) WHERE parent_id IS NOT NULL;
+
+3️⃣ جدول circles (الحلقات)
+
+CREATE TABLE circles (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    name VARCHAR(100) NOT NULL,
+
+    description TEXT NULL,
+
+    location VARCHAR(255) NOT NULL,
+
+    location_coords POINT NULL, -- للتكامل مع الخرائط مستقبلاً
+
+    schedule JSONB NOT NULL, -- {days: ['sun','tue'], time_start: '17:00', time_end: '18:30'}
+
+    capacity INTEGER CHECK (capacity > 0),
+
+    teacher_id UUID NOT NULL REFERENCES users(id),
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    deleted_at TIMESTAMP NULL
+
+);
+
+
+
+CREATE INDEX idx_circles_teacher ON circles(teacher_id) WHERE is_active = TRUE;
+
+CREATE INDEX idx_circles_location ON circles USING GIST (location_coords) WHERE location_coords IS NOT NULL;
+
+
+
+4️⃣ جدول enrollments (تسجيل الطلاب في الحلقات)CREATE TABLE enrollments (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    student_id UUID NOT NULL REFERENCES users(id),
+
+    circle_id UUID NOT NULL REFERENCES circles(id),
+
+    enrolled_at TIMESTAMP DEFAULT NOW(),
+
+    status VARCHAR(20) CHECK (status IN ('active','paused','completed','dropped')) DEFAULT 'active',
+
+    notes TEXT NULL,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    
+
+    UNIQUE(student_id, circle_id) WHERE status IN ('active','paused')
+
+);
+
+
+
+CREATE INDEX idx_enrollments_student ON enrollments(student_id);
+
+CREATE INDEX idx_enrollments_circle ON enrollments(circle_id);
+
+5️⃣ جدول attendance (سجل الحضور اليومي)
+
+CREATE TABLE attendance (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    enrollment_id UUID NOT NULL REFERENCES enrollments(id),
+
+    date DATE NOT NULL,
+
+    status VARCHAR(20) CHECK (status IN ('present','absent','late','excused')) NOT NULL,
+
+    teacher_note TEXT NULL,
+
+    recorded_by UUID NOT NULL REFERENCES users(id),
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    
+
+    UNIQUE(enrollment_id, date)
+
+);
+
+
+
+CREATE INDEX idx_attendance_date ON attendance(date);
+
+CREATE INDEX idx_attendance_enrollment ON attendance(enrollment_id);
+
+CREATE INDEX idx_attendance_status ON attendance(status) WHERE status = 'absent';
+
+6️⃣ جدول progress_tracking (تتبع التقدم في الحفظ)CREATE TABLE progress_tracking (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    student_id UUID NOT NULL REFERENCES users(id),
+
+    surah_name VARCHAR(100) NOT NULL, -- اسم السورة بالعربية
+
+    surah_number INTEGER CHECK (surah_number BETWEEN 1 AND 114),
+
+    start_verse INTEGER CHECK (start_verse >= 1),
+
+    end_verse INTEGER CHECK (end_verse >= start_verse),
+
+    completion_date DATE NULL,
+
+    quality_rating VARCHAR(20) CHECK (quality_rating IN ('excellent','good','needs_review')),
+
+    teacher_id UUID NOT NULL REFERENCES users(id),
+
+    notes TEXT NULL,
+
+    audio_recording_url VARCHAR(255) NULL, -- رابط تسجيل التلاوة (مستقبلي)
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    updated_at TIMESTAMP DEFAULT NOW()
+
+);
+
+
+
+CREATE INDEX idx_progress_student ON progress_tracking(student_id);
+
+CREATE INDEX idx_progress_surah ON progress_tracking(surah_name);
+
+CREATE INDEX idx_progress_date ON progress_tracking(completion_date) WHERE completion_date IS NOT NULL;
+
+
+
+-- تفعيل البحث النصي للعربية
+
+CREATE INDEX idx_progress_surah_trgm ON progress_tracking USING gin (surah_name gin_trgm_ops);
+
+7️⃣ جدول notifications (نظام الإشعارات)
+
+CREATE TABLE notifications (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID NOT NULL REFERENCES users(id),
+
+    type VARCHAR(50) CHECK (type IN ('absence_alert','review_reminder','event_announcement','system','message')),
+
+    title VARCHAR(255) NOT NULL,
+
+    body TEXT NOT NULL,
+
+    data JSONB NULL, -- {circle_id, date, action_url, ...}
+
+    is_read BOOLEAN DEFAULT FALSE,
+
+    read_at TIMESTAMP NULL,
+
+    created_at TIMESTAMP DEFAULT NOW(),
+
+    expires_at TIMESTAMP NULL
+
+);
+
+
+
+CREATE INDEX idx_notifications_user ON notifications(user_id, is_read);
+
+CREATE INDEX idx_notifications_unread ON notifications(user_id) WHERE is_read = FALSE AND expires_at > NOW();
+
+8️⃣ جدول activity_logs (سجل التدقيق والأمان)
+
+CREATE TABLE activity_logs (
+
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    user_id UUID NULL REFERENCES users(id),
+
+    action VARCHAR(100) NOT NULL, -- 'login', 'import_data', 'update_progress', ...
+
+    target_type VARCHAR(50) NULL, -- 'User', 'Circle', 'Attendance'
+
+    target_id UUID NULL,
+
+    old_values JSONB NULL,
+
+    new_values JSONB NULL,
+
+    ip_address INET NULL,
+
+    user_agent TEXT NULL,
+
+    created_at TIMESTAMP DEFAULT NOW()
+
+);
+
+
+
+CREATE INDEX idx_activity_logs_user ON activity_logs(user_id);
+
+CREATE INDEX idx_activity_logs_action ON activity_logs(action);
+
+CREATE INDEX idx_activity_logs_date ON activity_logs(created_at);
+
+🔧 Views للتقارير السريعة:
+
+-- عرض ملخص الطالب
+
+CREATE VIEW view_student_summary AS
+
+SELECT 
+
+    u.id, u.name, u.phone, p.birth_date, p.current_level,
+
+    COUNT(DISTINCT e.circle_id) as active_circles,
+
+    COUNT(DISTINCT CASE WHEN a.status = 'present' THEN a.id END) as total_present,
+
+    COUNT(DISTINCT CASE WHEN a.status = 'absent' THEN a.id END) as total_absent,
+
+    MAX(pt.updated_at) as last_progress_update
+
+FROM users u
+
+LEFT JOIN profiles p ON p.user_id = u.id
+
+LEFT JOIN enrollments e ON e.student_id = u.id AND e.status = 'active'
+
+LEFT JOIN attendance a ON a.enrollment_id = e.id
+
+LEFT JOIN progress_tracking pt ON pt.student_id = u.id
+
+WHERE u.role = 'student' AND u.is_active = TRUE
+
+GROUP BY u.id, u.name, u.phone, p.birth_date, p.current_level;
+
+
+
+-- عرض إحصائيات الحلقة
+
+CREATE VIEW view_circle_stats AS
+
+SELECT 
+
+    c.id, c.name, c.capacity,
+
+    COUNT(DISTINCT e.student_id) as enrolled_students,
+
+    ROUND(AVG(CASE WHEN a.status = 'present' THEN 100.0 ELSE 0 END), 2) as attendance_rate,
+
+    COUNT(DISTINCT pt.id) as total_progress_records,
+
+    MAX(pt.updated_at) as last_activity
+
+FROM circles c
+
+LEFT JOIN enrollments e ON e.circle_id = c.id AND e.status = 'active'
+
+LEFT JOIN attendance a ON a.enrollment_id = e.id
+
+LEFT JOIN progress_tracking pt ON pt.student_id = e.student_id
+
+WHERE c.is_active = TRUE
+
+GROUP BY c.id, c.name, c.capacity;
+
+
+
+🔐 المرحلة 3: نظام المصادقة والصلاحيات (Auth & RBAC)
+
+🔹 Backend (Laravel) - التنفيذ:
+
+1. إعداد Sanctum مع دعم متعدد الحراس:
+
+// config/sanctum.php
+
+'guard' => ['web', 'api'],
+
+'middleware' => ['throttle:api'],
+
+'expiration' => 60*24, // 24 ساعة
+
+'prefix' => 'api/v1',
+
+2. تعريف الأدوار والصلاحيات (DatabaseSeeder):
+
+use Spatie\Permission\Models\Role;
+
+use Spatie\Permission\Models\Permission;
+
+
+
+$permissions = [
+
+    // إدارة المستخدمين
+
+    'manage-users', 'view-users', 'create-user', 'update-user', 'delete-user',
+
+    // إدارة الحلقات
+
+    'manage-circles', 'view-circles', 'create-circle', 'update-circle', 'delete-circle',
+
+    // الحضور والتقدم
+
+    'record-attendance', 'update-progress', 'view-attendance', 'view-progress',
+
+    // التقارير
+
+    'view-reports', 'export-data', 'generate-pdf',
+
+    // الإعدادات
+
+    'manage-settings', 'import-data', 'manage-roles'
+
+];
+
+
+
+foreach ($permissions as $perm) Permission::firstOrCreate(['name' => $perm]);
+
+
+
+Role::firstOrCreate(['name' => 'super_admin'])->syncPermissions(Permission::all());
+
+Role::firstOrCreate(['name' => 'admin'])->syncPermissions([
+
+    'manage-users', 'view-users', 'create-user', 'update-user',
+
+    'manage-circles', 'view-circles', 'create-circle', 'update-circle',
+
+    'view-reports', 'export-data', 'import-data'
+
+]);
+
+Role::firstOrCreate(['name' => 'teacher'])->syncPermissions([
+
+    'view-circles', 'record-attendance', 'update-progress', 
+
+    'view-attendance', 'view-progress', 'view-users'
+
+]);
+
+Role::firstOrCreate(['name' => 'student'])->syncPermissions([
+
+    'view-own-progress', 'view-schedule', 'update-profile'
+
+]);
+
+Role::firstOrCreate(['name' => 'parent'])->syncPermissions([
+
+    'view-child-progress', 'view-child-attendance', 'receive-notifications'
+
+]);
+
+3. إنشاء Policies للتحكم في الوصول:
+
+php artisan make:policy CirclePolicy --model=Circle
+
+php artisan make:policy AttendancePolicy
+
+php artisan make:policy ProgressPolicy
+
+
+
+// app/Policies/CirclePolicy.php
+
+public function viewAny(User $user): bool {
+
+    return $user->hasRole(['admin', 'super_admin']) || 
+
+           ($user->hasRole('teacher') && $user->circles()->exists());
+
+}
+
+
+
+public function update(User $user, Circle $circle): bool {
+
+    return $user->hasRole(['admin', 'super_admin']) || 
+
+           ($user->id === $circle->teacher_id && $user->hasRole('teacher'));
+
+}
+
+4. Middleware للتحقق من الصلاحيات:
+
+// app/Http/Middleware/CheckPermission.php
+
+public function handle(Request $request, Closure $next, string $permission): Response
+
+{
+
+    if (! $request->user() || ! $request->user()->can($permission)) {
+
+        return response()->json(['error' => ['code' => 'FORBIDDEN', 'message' => 'غير مصرح لك بهذا الإجراء']], 403);
+
+    }
+
+    return $next($request);
+
+}
+
+
+
+// تسجيل الـ Middleware في bootstrap/app.php
+
+->withMiddleware(function (Middleware $middleware) {
+
+    $middleware->alias(['permission' => \App\Http\Middleware\CheckPermission::class]);
+
+})
+
+5. حماية المسارات بـ Rate Limiting:
+
+// app/Providers/RouteServiceProvider.php
+
+RateLimiter::for('api', function (Request $request) {
+
+    return $request->user() 
+
+        ? Limit::perHour(1000)->by($request->user()->id)
+
+        : Limit::perMinute(60)->by($request->ip());
+
+});
+
+
+
+RateLimiter::for('auth', function (Request $request) {
+
+    return Limit::perMinute(5)->by($request->ip()); // لمنع هجمات التخمين
+
+});
+
+1. إنشاء Hook مخصص للمصادقة:
+
+// src/hooks/useAuth.ts
+
+export function useAuth() {
+
+  const { data: user, mutate } = useSWR('/api/v1/auth/me', fetcher);
+
+  const { data: permissions } = useSWR(user ? '/api/v1/auth/permissions' : null, fetcher);
+
+  
+
+  const hasPermission = useCallback((perm: string) => {
+
+    return permissions?.includes(perm) ?? false;
+
+  }, [permissions]);
+
+  
+
+  const hasRole = useCallback((role: string | string[]) => {
+
+    const roles = Array.isArray(role) ? role : [role];
+
+    return roles.includes(user?.role ?? '');
+
+  }, [user]);
+
+  
+
+  return { user, permissions, hasPermission, hasRole, logout: () => mutate(null) };
+
+}
+
+2. مكون حماية المسارات:
+
+// src/components/auth/ProtectedRoute.tsx
+
+export default function ProtectedRoute({ 
+
+  children, 
+
+  allowedRoles, 
+
+  allowedPermissions 
+
+}: ProtectedRouteProps) {
+
+  const { user, hasRole, hasPermission } = useAuth();
+
+  const router = useRouter();
+
+  
+
+  useEffect(() => {
+
+    if (!user) {
+
+      router.replace('/login');
+
+      return;
+
+    }
+
+    if (allowedRoles && !hasRole(allowedRoles)) {
+
+      router.replace('/unauthorized');
+
+    }
+
+    if (allowedPermissions && !allowedPermissions.every(hasPermission)) {
+
+      router.replace('/unauthorized');
+
+    }
+
+  }, [user, hasRole, hasPermission]);
+
+  
+
+  if (!user) return <LoadingSpinner />;
+
+  return <>{children}</>;
+
+}
+
+3. تخزين آمن للتوكن:
+
+// src/lib/api.ts
+
+const api = axios.create({
+
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+
+  headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+
+  withCredentials: true // لاستخدام httpOnly cookies مع Sanctum
+
+});
+
+
+
+api.interceptors.response.use(
+
+  res => res,
+
+  async error => {
+
+    if (error.response?.status === 401 && !error.config._retry) {
+
+      error.config._retry = true;
+
+      await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true });
+
+      return api(error.config);
+
+    }
+
+    return Promise.reject(error);
+
+  }
+
+);
+
+
+
+🔌 المرحلة 4: تصميم الـ API (Laravel Routes)
+
+📦 هيكلية المسارات مع Versioning (/api/v1):
+
+🔓 المسارات العامة (Public):
+
+// routes/api.php
+
+Route::prefix('v1')->group(function () {
+
+    
+
+    // المصادقة
+
+    Route::prefix('auth')->group(function () {
+
+        Route::post('login', [AuthController::class, 'login']);
+
+        Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
+
+        Route::post('refresh', [AuthController::class, 'refresh']);
+
+        Route::post('forgot-password', [PasswordResetController::class, 'sendLink']);
+
+        Route::post('reset-password', [PasswordResetController::class, 'reset']);
+
+        Route::get('verify-email/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+
+            ->name('verification.verify');
+
+    });
+
+    
+
+    // المعلومات العامة (للعرض فقط)
+
+    Route::get('circles/public', [CircleController::class, 'publicList']);
+
+    Route::get('circles/{id}/schedule', [CircleController::class, 'publicSchedule']);
+
+});
+
+🔐 مسارات المدير (admin):
+
+
+
+Route::middleware(['auth:sanctum', 'role:admin|super_admin'])->prefix('v1/admin')->group(function () {
+
+    
+
+    // إدارة المستخدمين
+
+    Route::apiResource('users', UserController::class);
+
+    Route::patch('users/{id}/toggle-status', [UserController::class, 'toggleStatus']);
+
+    Route::post('users/bulk-import', [UserController::class, 'bulkImport']);
+
+    
+
+    // إدارة الحلقات
+
+    Route::apiResource('circles', CircleController::class);
+
+    Route::get('circles/{id}/stats', [CircleController::class, 'stats']);
+
+    Route::post('circles/{id}/assign-teacher', [CircleController::class, 'assignTeacher']);
+
+    
+
+    // التقارير
+
+    Route::get('reports/attendance', [ReportController::class, 'attendanceReport']);
+
+    Route::get('reports/progress', [ReportController::class, 'progressReport']);
+
+    Route::get('reports/export/{type}', [ReportController::class, 'export'])->where('type', 'excel|pdf');
+
+    
+
+    // الإعدادات
+
+    Route::get('settings', [SettingController::class, 'index']);
+
+    Route::put('settings', [SettingController::class, 'update']);
+
+});
+
+👨‍🏫 مسارات المعلم (teacher):
+
+Route::middleware(['auth:sanctum', 'role:teacher'])->prefix('v1/teacher')->group(function () {
+
+    
+
+    // الحلقات الخاصة بالمعلم
+
+    Route::get('my-circles', [TeacherCircleController::class, 'index']);
+
+    Route::get('circles/{circle}/students', [TeacherCircleController::class, 'students']);
+
+    
+
+    // تسجيل الحضور (فردي أو جماعي)
+
+    Route::post('attendance', [AttendanceController::class, 'store']);
+
+    Route::post('attendance/bulk', [AttendanceController::class, 'bulkStore']);
+
+    Route::get('attendance/history', [AttendanceController::class, 'history']);
+
+    
+
+    // تحديث التقدم
+
+    Route::post('progress', [ProgressController::class, 'store']);
+
+    Route::put('progress/{id}', [ProgressController::class, 'update']);
+
+    Route::get('students/{id}/progress', [ProgressController::class, 'studentProgress']);
+
+    
+
+    // الإشعارات الخاصة بالمعلم
+
+    Route::get('notifications', [NotificationController::class, 'index']);
+
+    Route::patch('notifications/{id}/read', [NotificationController::class, 'markRead']);
+
+});
+
+
+
+👨‍🎓 مسارات الطالب وولي الأمر (student/parent):
+
+Route::middleware(['auth:sanctum'])->prefix('v1/me')->group(function () {
+
+    
+
+    // الملف الشخصي
+
+    Route::get('profile', [ProfileController::class, 'show']);
+
+    Route::put('profile', [ProfileController::class, 'update']);
+
+    Route::post('profile/avatar', [ProfileController::class, 'uploadAvatar']);
+
+    
+
+    // للطلاب فقط
+
+    Route::middleware('role:student')->group(function () {
+
+        Route::get('circles', [StudentController::class, 'myCircles']);
+
+        Route::get('progress', [StudentController::class, 'progress']);
+
+        Route::get('attendance', [StudentController::class, 'attendance']);
+
+        Route::get('schedule', [StudentController::class, 'schedule']);
+
+    });
+
+    
+
+    // لأولياء الأمور فقط
+
+    Route::middleware('role:parent')->group(function () {
+
+        Route::get('children', [ParentController::class, 'children']);
+
+        Route::get('children/{id}/progress', [ParentController::class, 'childProgress']);
+
+        Route::get('children/{id}/attendance', [ParentController::class, 'childAttendance']);
+
+    });
+
+    
+
+    // مشترك
+
+    Route::get('notifications', [NotificationController::class, 'index']);
+
+    Route::patch('notifications/{id}/read', [NotificationController::class, 'markRead']);
+
+});
+
+
+
+📦 معايير جودة الـ API:
+
+استخدام API Resources لتوحيد مخرجات JSON
+
+توثيق تلقائي عبر /api/docs باستخدام Scribe
+
+أخطاء موحدة: {"error": {"code": "VALIDATION_ERROR", "message": "...", "details": {...}}}
+
+دعم Pagination: ?page=1&per_page=20
+
+دعم Filtering: ?status=active&role=teacher
+
+دعم Sorting: ?sort=-created_at,name
+
+استخدام Eloquent Scopes لتصفية البيانات حسب الصلاحيات تلقائياً
+
+
+
+🎨 المرحلة 5: تكامل الواجهة الأمامية (Next.js + TailAdmin)
+
+📁 هيكل المجلدات المقترح:
+
+
+
+quran-admin-frontend/
+
+├── src/
+
+│   ├── app/
+
+│   │   ├── (auth)/
+
+│   │   │   ├── login/page.tsx
+
+│   │   │   ├── forgot-password/page.tsx
+
+│   │   │   └── reset-password/[token]/page.tsx
+
+│   │   ├── (dashboard)/
+
+│   │   │   ├── layout.tsx          // Sidebar + Header من TailAdmin
+
+│   │   │   ├── page.tsx            // لوحة التحكم (تختلف حسب الدور)
+
+│   │   │   ├── students/
+
+│   │   │   │   ├── page.tsx
+
+│   │   │   │   ├── [id]/page.tsx
+
+│   │   │   │   └── import/page.tsx
+
+│   │   │   ├── circles/
+
+│   │   │   ├── attendance/
+
+│   │   │   ├── progress/
+
+│   │   │   ├── reports/
+
+│   │   │   └── settings/
+
+│   │   ├── unauthorized/page.tsx
+
+│   │   └── layout.tsx              // Root Layout مع Provider
+
+│   ├── components/
+
+│   │   ├── ui/                     // مكونات TailAdmin المعاد استخدامها
+
+│   │   ├── forms/                  // نماذج بـ react-hook-form + zod
+
+│   │   ├── tables/                 // جداول ذكية مع search/filter/export
+
+│   │   ├── charts/                 // رسوم بيانية بـ recharts
+
+│   │   ├── feedback/               // Loading, EmptyState, ErrorBoundary
+
+│   │   └── auth/                   // ProtectedRoute, RoleGuard
+
+│   ├── lib/
+
+│   │   ├── api.ts                  // axios instance مع interceptors
+
+│   │   ├── auth.ts                 // دوال المصادقة
+
+│   │   ├── permissions.ts          // utilities للتحقق من الصلاحيات
+
+│   │   ├── utils.ts                // formatDate, arabicSort, generatePDF
+
+│   │   └── constants.ts            // الثوابت (roles, permissions, enums)
+
+│   ├── hooks/
+
+│   │   ├── useAuth.ts
+
+│   │   ├── useCircles.ts
+
+│   │   ├── useAttendance.ts
+
+│   │   └── useImport.ts
+
+│   ├── types/
+
+│   │   ├── user.ts
+
+│   │   ├── circle.ts
+
+│   │   ├── attendance.ts
+
+│   │   └── api.d.ts
+
+│   ├── locales/
+
+│   │   ├── ar/common.json
+
+│   │   ├── ar/dashboard.json
+
+│   │   └── en/...
+
+│   └── styles/
+
+│       ├── globals.css
+
+│       └── tailwind.css
+
+├── public/
+
+│   ├── fonts/
+
+│   ├── images/
+
+│   └── icons/
+
+├── docker/
+
+│   ├── Dockerfile
+
+│   └── entrypoint.sh
+
+├── next.config.js
+
+├── tailwind.config.ts
+
+└── package.json
+
+
+
+✅ متطلبات الواجهة:
+
+دعم RTL كامل: تفعيل dir="rtl" و lang="ar" في <html>
+
+خط عربي احترافي: استخدام Tajawal أو Cairo من Google Fonts
+
+توطين كامل: استخدام next-i18next مع ملفات ترجمة منفصلة
+
+استيراد البيانات: صفحة /students/import مع معاينة قبل التأكيد
+
+تصدير البيانات: زر "تصدير" في جميع الجداول (Excel + PDF)
+
+لوحة تحكم ذكية: بطاقات ملخصة تظهر:
+
+📊 إجمالي الطلاب: 150
+
+✅ نسبة الحضور اليوم: 94%
+
+🔔 تنبيهات الغياب: 3 طلاب
+
+📚 الحلقات النشطة: 8
+
+
+
+رسوم بيانية: تقدم الحفظ، نسبة الحضور الأسبوعية، توزيع الطلاب على الحلقات
+
+بحث متقدم: بحث نصي عربي مع دعم pg_trgm للنتائج الذكية
+
+
+
+🔔 المرحلة 6: الميزات التفاعلية والتنبيهات
+
+🚨 نظام التنبيهات التلقائية:
+
+1. تنبيه الغياب (3 أيام متتالية):
+
+
+
+// app/Jobs/CheckAbsentStudents.php
+
+public function handle(): void
+
+{
+
+    $absentStudents = Enrollment::with(['student.parent'])
+
+        ->whereHas('attendance', function($q) {
+
+            $q->where('status', 'absent')
+
+              ->where('date', '>=', now()->subDays(3));
+
+        })
+
+        ->get()
+
+        ->filter(fn($e) => $e->attendance->where('status', 'absent')->count() >= 3);
+
+    
+
+    foreach ($absentStudents as $enrollment) {
+
+        $enrollment->student->notify(new StudentAbsentAlert($enrollment));
+
+        if ($enrollment->student->profile->parent_id) {
+
+            $enrollment->student->profile->parent->notify(
+
+                new ParentAbsentAlert($enrollment->student, $enrollment->circle)
+
+            );
+
+        }
+
+    }
+
+}
+
+
+
+// جدولة المهمة يومياً في app/Console/Kernel.php
+
+$schedule->job(new CheckAbsentStudents)->dailyAt('20:00');
+
+2. تذكير المراجعة (14 يوم بدون تقدم):
+
+// app/Jobs/CheckReviewReminders.php
+
+public function handle(): void
+
+{
+
+    $students = User::where('role', 'student')
+
+        ->whereDoesntHave('progressTracking', function($q) {
+
+            $q->where('updated_at', '>=', now()->subDays(14));
+
+        })->get();
+
+    
+
+    foreach ($students as $student) {
+
+        $teacher = $student->circles()->first()?->teacher;
+
+        if ($teacher) {
+
+            $teacher->notify(new ReviewReminder($student));
+
+        }
+
+    }
+
+}
+
+3. إشعارات الوقت الفعلي (WebSockets):
+
+
+
+// عند تسجيل الحضور
+
+event(new AttendanceRecorded($attendance));
+
+
+
+// في Next.js - الاستماع للإشعارات
+
+useEffect(() => {
+
+  const echo = new Echo({
+
+    broadcaster: 'reverb',
+
+    key: process.env.NEXT_PUBLIC_REVERB_APP_KEY,
+
+    wsHost: process.env.NEXT_PUBLIC_REVERB_HOST,
+
+    wsPort: 80,
+
+    forceTLS: false,
+
+  });
+
+  
+
+  echo.private(`App.Models.User.${userId}`)
+
+    .notification((data: NotificationData) => {
+
+      // عرض إشعار فوري في الواجهة
+
+      toast.info(data.title, { body: data.body });
+
+      // تحديث العداد في الشريط العلوي
+
+      mutateUnreadCount();
+
+    });
+
+    
+
+  return () => echo.disconnect();
+
+}, [userId]);
+
+4. تقارير PDF الأسبوعية:
+
+// app/Console/Commands/GenerateWeeklyReports.php
+
+public function handle(): void
+
+{
+
+    $parents = User::where('role', 'parent')->with('children.progressTracking')->get();
+
+    
+
+    foreach ($parents as $parent) {
+
+        $pdf = PDF::loadView('reports.weekly-student-progress', [
+
+            'parent' => $parent,
+
+            'period' => now()->subWeek()->format('Y-m-d') . ' - ' . now()->format('Y-m-d')
+
+        ]);
+
+        
+
+        // إرسال بالبريد أو حفظ للتحميل
+
+        $parent->notify(new WeeklyReportReady($pdf->stream(), now()));
+
+    }
+
+}
+
+🧪 المرحلة 7: الاختبار والجودة
+
+✅ Laravel (Pest) - أمثلة اختبارية:
+
+php
+
+
+
+// tests/Feature/Auth/LoginTest.php
+
+test('user can login with phone and password', function () {
+
+    $user = User::factory()->student()->create(['password' => bcrypt('password123')]);
+
+    
+
+    $response = $this->postJson('/api/v1/auth/login', [
+
+        'phone' => $user->phone,
+
+        'password' => 'password123',
+
+    ]);
+
+    
+
+    $response->assertOk()
+
+        ->assertJsonStructure(['data' => ['user', 'token', 'permissions']]);
+
+});
+
+
+
+test('login fails with invalid credentials', function () {
+
+    $response = $this->postJson('/api/v1/auth/login', [
+
+        'phone' => '0500000000',
+
+        'password' => 'wrongpassword',
+
+    ]);
+
+    
+
+    $response->assertUnauthorized()
+
+        ->assertJson(['error' => ['code' => 'AUTH_FAILED']]);
+
+});
+
+
+
+// tests/Feature/Teacher/AttendanceTest.php
+
+test('teacher can record bulk attendance for own circle', function () {
+
+    $teacher = User::factory()->teacher()->create();
+
+    $circle = Circle::factory()->create(['teacher_id' => $teacher->id]);
+
+    $students = User::factory()->student()->count(3)->create();
+
+    
+
+    $enrollments = $students->map(fn($s) => 
+
+        Enrollment::create(['student_id' => $s->id, 'circle_id' => $circle->id])
+
+    );
+
+    
+
+    $this->actingAs($teacher);
+
+    
+
+    $response = $this->postJson('/api/v1/teacher/attendance/bulk', [
+
+        'circle_id' => $circle->id,
+
+        'date' => today()->toDateString(),
+
+        'records' => $enrollments->map(fn($e) => [
+
+            'student_id' => $e->student_id,
+
+            'status' => 'present',
+
+            'note' => ''
+
+        ])->toArray()
+
+    ]);
+
+    
+
+    $response->assertOk();
+
+    expect(Attendance::count())->toBe(3);
+
+    expect(Attendance::where('status', 'present')->count())->toBe(3);
+
+});
+
+
+
+test('teacher cannot record attendance for other teacher circle', function () {
+
+    $teacher1 = User::factory()->teacher()->create();
+
+    $teacher2 = User::factory()->teacher()->create();
+
+    $circle = Circle::factory()->create(['teacher_id' => $teacher2->id]);
+
+    
+
+    $this->actingAs($teacher1)
+
+        ->postJson('/api/v1/teacher/attendance/bulk', [
+
+            'circle_id' => $circle->id,
+
+            'date' => today()->toDateString(),
+
+            'records' => []
+
+        ])
+
+        ->assertForbidden();
+
+});
+
+✅ Next.js (Vitest + Testing Library):
+
+
+
+// __tests__/components/AttendanceTable.test.tsx
+
+import { render, screen, waitFor } from '@testing-library/react';
+
+import { AttendanceTable } from '@/components/tables/AttendanceTable';
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+
+
+test('renders attendance table with student data', async () => {
+
+  const queryClient = new QueryClient({
+
+    defaultOptions: { queries: { retry: false } }
+
+  });
+
+  
+
+  render(
+
+    <QueryClientProvider client={queryClient}>
+
+      <AttendanceTable circleId="test-uuid" date="2024-01-15" />
+
+    </QueryClientProvider>
+
+  );
+
+  
+
+  // Show loading state
+
+  expect(screen.getByRole('status')).toHaveTextContent('جاري التحميل...');
+
+  
+
+  // Wait for data and verify
+
+  await waitFor(() => screen.getByText('أحمد محمد'));
+
+  expect(screen.getByRole('table')).toBeInTheDocument();
+
+  expect(screen.getAllByRole('row')).toHaveLength(4); // header + 3 students
+
+});
+
+
+
+test('allows teacher to mark attendance', async () => {
+
+  // ... test interaction with userEvent
+
+});
+
+📊 معايير الجودة الإلزامية:
+
+تغطية اختبارية >80% للـ Business Logic الأساسية
+
+تشغيل PHPStan مستوى 8 + Larastan للتحليل الثابت
+
+تشغيل ESLint + Prettier + TypeScript strict mode
+
+اختبار التكامل بـ Playwright لسيناريو كامل:
+
+تسجيل دخول معلم → عرض طلابه → تسجيل حضور → ظهور الإشعار → تحديث الإحصائيات
+
+فحص الأمان بـ Laravel Security Checker + npm audit
+
+
+
+🐳 المرحلة 8: التغليف والنشر (Docker + Production)
+
+📄 ملف docker-compose.yml الكامل:
+
+version: '3.8'
+
+
+
+services:
+
+  # === Laravel Backend ===
+
+  laravel:
+
+    build:
+
+      context: ./backend
+
+      dockerfile: Dockerfile
+
+      args:
+
+        - USER_ID=${USER_ID:-1000}
+
+        - GROUP_ID=${GROUP_ID:-1000}
+
+    container_name: quran_laravel
+
+    restart: unless-stopped
+
+    ports:
+
+      - "${APP_PORT:-8000}:8000"
+
+    environment:
+
+      APP_ENV: ${APP_ENV:-production}
+
+      APP_DEBUG: ${APP_DEBUG:-false}
+
+      APP_URL: ${APP_URL:-http://localhost}
+
+      DB_HOST: postgres
+
+      DB_PORT: 5432
+
+      DB_DATABASE: ${DB_DATABASE}
+
+      DB_USERNAME: ${DB_USERNAME}
+
+      DB_PASSWORD: ${DB_PASSWORD}
+
+      REDIS_HOST: redis
+
+      CACHE_DRIVER: redis
+
+      QUEUE_CONNECTION: redis
+
+      SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS}
+
+    volumes:
+
+      - ./backend:/var/www/html
+
+      - laravel_storage:/var/www/html/storage
+
+    depends_on:
+
+      postgres:
+
+        condition: service_healthy
+
+      redis:
+
+        condition: service_started
+
+    healthcheck:
+
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+
+      interval: 30s
+
+      timeout: 10s
+
+      retries: 3
+
+    networks:
+
+      - quran_net
+
+
+
+  # === Next.js Frontend ===
+
+  nextjs:
+
+    build:
+
+      context: ./frontend
+
+      dockerfile: Dockerfile
+
+    container_name: quran_nextjs
+
+    restart: unless-stopped
+
+    ports:
+
+      - "${NEXTJS_PORT:-3000}:3000"
+
+    environment:
+
+      NODE_ENV: production
+
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://laravel:8000/api/v1}
+
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+
+      NEXT_PUBLIC_REVERB_APP_KEY: ${REVERB_APP_KEY}
+
+      NEXT_PUBLIC_REVERB_HOST: ${REVERB_HOST}
+
+    depends_on:
+
+      - laravel
+
+    healthcheck:
+
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+
+      interval: 30s
+
+      timeout: 10s
+
+      retries: 3
+
+    networks:
+
+      - quran_net
+
+
+
+  # === PostgreSQL Database ===
+
+  postgres:
+
+    image: postgres:15-alpine
+
+    container_name: quran_postgres
+
+    restart: unless-stopped
+
+    ports:
+
+      - "${DB_PORT:-5432}:5432"
+
+    environment:
+
+      POSTGRES_DB: ${DB_DATABASE}
+
+      POSTGRES_USER: ${DB_USERNAME}
+
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+    volumes:
+
+      - postgres_data:/var/lib/postgresql/data
+
+      - ./backend/database/backup:/backup
+
+    command: >
+
+      postgres 
+
+      -c max_connections=100 
+
+      -c shared_buffers=256MB
+
+      -c effective_cache_size=768MB
+
+    healthcheck:
+
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+
+      interval: 10s
+
+      timeout: 5s
+
+      retries: 5
+
+    networks:
+
+      - quran_net
+
+
+
+  # === Redis for Cache & Queue ===
+
+  redis:
+
+    image: redis:7-alpine
+
+    container_name: quran_redis
+
+    restart: unless-stopped
+
+    ports:
+
+      - "${REDIS_PORT:-6379}:6379"
+
+    volumes:
+
+      - redis_data:/data
+
+    command: redis-server --appendonly yes
+
+    healthcheck:
+
+      test: ["CMD", "redis-cli", "ping"]
+
+      interval: 10s
+
+      timeout: 5s
+
+      retries: 3
+
+    networks:
+
+      - quran_net
+
+
+
+  # === Laravel Reverb (WebSockets) ===
+
+  reverb:
+
+    build:
+
+      context: ./backend
+
+      dockerfile: Dockerfile
+
+    container_name: quran_reverb
+
+    restart: unless-stopped
+
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+
+    ports:
+
+      - "${REVERB_PORT:-8080}:8080"
+
+    environment:
+
+      APP_ENV: ${APP_ENV}
+
+      REDIS_HOST: redis
+
+    depends_on:
+
+      - redis
+
+      - laravel
+
+    networks:
+
+      - quran_net
+
+
+
+  # === Nginx Reverse Proxy ===
+
+  nginx:
+
+    image: nginx:alpine
+
+    container_name: quran_nginx
+
+    restart: unless-stopped
+
+    ports:
+
+      - "80:80"
+
+      - "443:443"
+
+    volumes:
+
+      - ./nginx/conf.d:/etc/nginx/conf.d
+
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+
+      - laravel_storage:/var/www/storage:ro
+
+    depends_on:
+
+      - laravel
+
+      - nextjs
+
+    networks:
+
+      - quran_net
+
+
+
+  # === Adminer (Dev Only) ===
+
+  adminer:
+
+    image: adminer:latest
+
+    container_name: quran_adminer
+
+    restart: unless-stopped
+
+    ports:
+
+      - "8080:8080"
+
+    environment:
+
+      ADMINER_DEFAULT_SERVER: postgres
+
+    profiles:
+
+      - dev
+
+    networks:
+
+      - quran_net
+
+
+
+  # === Backup Service ===
+
+  backup:
+
+    image: prodrigestivill/postgres-backup-local:15
+
+    container_name: quran_backup
+
+    restart: unless-stopped
+
+    environment:
+
+      POSTGRES_HOST: postgres
+
+      POSTGRES_DB: ${DB_DATABASE}
+
+      POSTGRES_USER: ${DB_USERNAME}
+
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+
+      BACKUP_KEEP_DAYS: 7
+
+      BACKUP_CRON: "0 2 * * *"  # Daily at 2 AM
+
+    volumes:
+
+      - ./backend/database/backup:/backups
+
+    depends_on:
+
+      - postgres
+
+    networks:
+
+      - quran_net
+
+
+
+volumes:
+
+  postgres_data:
+
+  redis_data:
+
+  laravel_storage:
+
+
+
+networks:
+
+  quran_net:
+
+    driver: bridge
+
+Docker الإضافية:
+
+backend/Dockerfile:
+
+dockerfile
+
+
+
+
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+26
+
+27
+
+28
+
+29
+
+30
+
+31
+
+32
+
+33
+
+34
+
+35
+
+36
+
+37
+
+38
+
+39
+
+40
+
+41
+
+42
+
+43
+
+
+
+
+
+
+
+
+
+frontend/Dockerfile:
+
+dockerfile
+
+
+
+
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+11
+
+12
+
+13
+
+14
+
+15
+
+16
+
+17
+
+18
+
+19
+
+20
+
+21
+
+22
+
+23
+
+24
+
+25
+
+26
+
+FROM node:18-alpine AS builder
+
+
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run build
+
+
+
+FROM node:18-alpine AS runner
+
+WORKDIR /app
+
+
+
+ENV NODE_ENV=production
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+
+
+RUN addgroup --system --gid 1001 nodejs && \
+
+    adduser --system --uid 1001 nextjs
+
+
+
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+
+COPY --from=builder /app/node_modules ./node_modules
+
+COPY --from=builder /app/package.json ./package.json
+
+COPY --from=builder /app/public ./public
+
+
+
+USER nextjs
+
+
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+
+
+
+🚀 سكربت النشر التلقائي:
+
+#!/bin/bash
+
+# deploy.sh
+
+
+
+set -e
+
+
+
+echo "🚀 بدء نشر نظام إدارة حلقات القرآن..."
+
+
+
+# 1. سحب التحديثات
+
+git pull origin main
+
+
+
+# 2. بناء الصور
+
+docker-compose build --no-cache
+
+
+
+# 3. تشغيل الخدمات
+
+docker-compose up -d
+
+
+
+# 4. انتظار جاهزية قاعدة البيانات
+
+echo "⏳ انتظار جاهزية قاعدة البيانات..."
+
+until docker-compose exec postgres pg_isready -U ${DB_USERNAME}; do
+
+  sleep 2
+
+done
+
+
+
+# 5. تشغيل الميجريشن والسييد
+
+echo "🔄 تشغيل الميجريشن والبيانات الأولية..."
+
+docker-compose exec -T laravel php artisan migrate --force
+
+docker-compose exec -T laravel php artisan db:seed --force
+
+docker-compose exec -T laravel php artisan config:cache
+
+docker-compose exec -T laravel php artisan route:cache
+
+docker-compose exec -T laravel php artisan view:cache
+
+
+
+# 6. فحص الصحة
+
+echo "🔍 فحص صحة الخدمات..."
+
+sleep 10
+
+curl -f http://localhost:8000/api/health || exit 1
+
+curl -f http://localhost:3000/api/health || exit 1
+
+
+
+echo "✅ اكتمل النشر بنجاح! 🎉"
+
+echo "🌐 الواجهة: ${APP_URL}"
+
+echo "🔧 لوحة التحكم: ${APP_URL}/login"
+
+
+
+المرحلة 9: التوثيق والتسليم
+
+📦 حزمة التسليم المطلوبة:
+
+quran-admin-deliverable/
+
+├── 📄 README.md                 # دليل التثبيت والتشغيل
+
+├── 📄 CHANGELOG.md             # سجل الإصدارات
+
+├── 📄 LICENSE                  # رخصة الاستخدام
+
+├── 📁 backend/                 # كود Laravel
+
+│   ├── 📄 composer.json
+
+│   ├── 📄 docker-compose.yml
+
+│   ├── 📁 app/
+
+│   ├── 📁 database/migrations/
+
+│   ├── 📄 .env.example
+
+│   └── 📄 phpunit.xml
+
+├── 📁 frontend/                # كود Next.js
+
+│   ├── 📄 package.json
+
+│   ├── 📄 next.config.js
+
+│   ├── 📁 src/
+
+│   ├── 📄 .env.example
+
+│   └── 📄 vitest.config.ts
+
+├── 📁 docs/
+
+│   ├── 📄 API_DOCUMENTATION.md # توثيق الـ API
+
+│   ├── 📄 USER_GUIDE_AR.pdf    # دليل المستخدم بالعربية
+
+│   ├── 📄 DEVELOPER_GUIDE.md   # دليل المطورين
+
+│   └── 📄 SECURITY.md          # سياسات الأمان
+
+├── 📁 scripts/
+
+│   ├── 📄 deploy.sh            # سكربت النشر
+
+│   ├── 📄 backup.sh            # سكربت النسخ الاحتياطي
+
+│   └── 📄 import-sample.sh     # استيراد بيانات تجريبية
+
+└── 📁 tests/
+
+    ├── 📁 backend/             # اختبارات Pest
+
+    └── 📁 frontend/            # اختبارات Vitest
+
+
+
+📄 محتوى README.md الأساسي:
+
+# 🕌 نظام إدارة حلقات تحفيظ القرآن الكريم
+
+
+
+## ✨ الميزات
+
+- ✅ إدارة متعددة الأدوار (مدير، معلم، طالب، ولي أمر)
+
+- ✅ استيراد/تصدير بيانات من/إلى إكسل
+
+- ✅ تتبع تقدم الحفظ مع تقييم التلاوة
+
+- ✅ نظام حضور وغياب مع تنبيهات تلقائية
+
+- ✅ تقارير وتحليلات بصرية
+
+- ✅ دعم كامل للغة العربية وواجهة RTL
+
+- ✅ إشعارات فورية عبر WebSockets
+
+- ✅ أمان عالي مع تشفير ونسخ احتياطي تلقائي
+
+
+
+## 🛠️ المتطلبات
+
+- Docker 24+ و Docker Compose 2.20+
+
+- 4GB RAM كحد أدنى (8GB موصى به للإنتاج)
+
+- منفذ 80، 443، 5432 متاح
+
+
+
+## 🚀 التثبيت السريع
+
+```bash
+
+# 1. نسخ ملف البيئة
+
+cp .env.example .env
+
+
+
+# 2. تعديل المتغيرات الحساسة
+
+# APP_KEY, DB_PASSWORD, SANCTUM_STATEFUL_DOMAINS...
+
+
+
+# 3. تشغيل النظام
+
+./scripts/deploy.sh
+
+
+
+# 4. الدخول كمسؤول افتراضي
+
+البريد: admin@quran.local
+
+كلمة المرور: (من ملف .env: DEFAULT_ADMIN_PASSWORD)
+
+🔧 التطوير المحلي
+
+# تشغيل بيئة التطوير
+
+docker-compose --profile dev up -d
+
+
+
+# الوصول للخدمات
+
+🌐 Next.js: http://localhost:3000
+
+🔌 Laravel API: http://localhost:8000
+
+🗄️ Adminer (DB GUI): http://localhost:8080
+
+📡 Reverb (WebSockets): ws://localhost:8080
+
+
+
+# تشغيل الاختبارات
+
+docker-compose exec laravel composer test      # Laravel
+
+docker-compose exec nextjs npm test            # Next.js
+
+
+
+📚 التوثيق
+
+📖 دليل المستخدم: docs/USER_GUIDE_AR.pdf
+
+🔌 توثيق الـ API: /api/docs
+
+👨‍💻 دليل المطور: docs/DEVELOPER_GUIDE.md
+
+🛡️ الأمان
+
+جميع كلمات المرور مشفرة بـ bcrypt (12 rounds)
+
+حماية تلقائية من: SQL Injection, XSS, CSRF
+
+Rate Limiting على جميع مسارات المصادقة
+
+سجل تدقيق (Audit Log) لجميع العمليات الحساسة
+
+نسخ احتياطي يومي مشفر لقاعدة البيانات
+
+🤝 المساهمة
+
+Fork المشروع
+
+أنشئ فرعاً للميزة الجديدة: git checkout -b feature/amazing-feature
+
+التزم بـ Conventional Commits
+
+أضف اختبارات للميزة الجديدة
+
+أرسل Pull Request
+
+📄 الرخصة
+
+هذا المشروع مملوك ومؤسسي. يُمنع النسخ أو التوزيع دون إذن كتابي.
+
+
+
+---
+
+
+
+## ⚠️ معايير الأمان الإلزامية
+
+
+
+### 🔐 حماية البيانات:
+
+- [ ] كلمات المرور: `bcrypt` مع `rounds=12` كحد أدنى
+
+- [ ] الحقول الحساسة (الجوال، الهوية): تشفير في قاعدة البيانات باستخدام `pgcrypto`
+
+```sql
+
+-- مثال: تخزين مشفر للجوال
+
+INSERT INTO users (phone_encrypted) 
+
+VALUES (pgp_sym_encrypt('0501234567', env('DB_ENCRYPTION_KEY')));
+
+
+
+مفاتيح التشفير تُخزن في متغيرات بيئة منفصلة عن الكود
+
+🛡️ حماية التطبيق:
+
+تفعيل CSP headers في Nginx:
+
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com; connect-src 'self' ws: wss:;" always;
+
+
+
+تفعيل HSTS للإجبار على HTTPS في الإنتاج
+
+تعطيل عرض أخطاء لارافيل التفصيلية في الإنتاج: APP_DEBUG=false
+
+📋 التدقيق والمراقبة:
+
+تسجيل جميع عمليات: تسجيل الدخول، تعديل البيانات، الحذف، الاستيراد
+
+// مثال باستخدام spatie/laravel-activitylog
+
+activity()
+
+    ->performedOn($model)
+
+    ->withProperties(['old' => $old, 'new' => $new])
+
+    ->log('updated');
+
+
+
+تنبيه المسؤول عند: محاولات دخول فاشلة متكررة، تغيير صلاحيات، حذف بيانات
+
+💾 النسخ الاحتياطي والاستعادة:
+
+نسخ يومي تلقائي بـ spatie/laravel-backup
+
+تشفير النسخ الاحتياطية قبل رفعها للتخزين السحابي
+
+اختبار استعادة النسخ شهرياً في بيئة معزولة
+
+
+
+🎯 معيار القبول (Definition of Done)
+
+✅ يعتبر المشروع مكتملاً وقابلاً للتسليم عندما:
+
+الوظائف الأساسية:
+
+يمكن للمستخدمين من جميع الأدوار تسجيل الدخول والوصول فقط لما يسمح به دورهم
+
+يمكن استيراد ملف إكسل تجريبي (50 طالب + 5 حلقات) بنجاح خلال <30 ثانية
+
+تظهر لوحة المعلم بيانات طلابه فقط، ويمكنه تسجيل الحضور والتقدم بدون أخطاء
+
+يتلقى ولي الأمر تنبيهاً تلقائياً عند غياب ابنه 3 أيام متتالية (بريد + داخل التطبيق)
+
+يعمل النظام بكامله عبر docker-compose up بدون أخطاء أو تحذيرات حرجة
+
+الجودة والأداء:
+
+جميع الاختبارات تمر بنجاح: composer test + npm test (تغطية >80%)
+
+وقت استجابة الـ API <500ms للطلبات العادية، <2s للتقارير المعقدة
+
+تحميل الصفحة الأولى <3s على اتصال 3G
+
+لا توجد أخطاء console في المتصفح، ولا logs حرجة في السيرفر
+
+التوثيق والتجربة:
+
+التوثيق كافٍ لمطور جديد لفهم النظام وبدء المساهمة خلال ساعة واحدة
+
+دليل المستخدم بالعربية واضح ويغطي 90% من السيناريوهات اليومية
+
+واجهة المستخدم متوافقة مع شاشات: موبايل (360px)، تابلت (768px)، ديسكتوب (1440px+)
+
+الأمان:
+
+اجتياز فحص أمان أساسي بـ npm audit و composer security-checker
+
+لا توجد بيانات حساسة مخزنة في localStorage أو console.log
+
+جميع المسارات الحساسة محمية بـ Rate Limiting و Authentication
+
+
+
+💡 ملاحظات ختامية للمطور الذكي
+
+🎨 تجربة المستخدم العربي:// تأكد من:
+
+- اتجاه النصوص: `dir="rtl"` و `text-align: right`
+
+- التنسيق التاريخي: استخدام `hijri-date` أو `moment-hijri` للعرض الاختياري
+
+- الأسماء والبيانات: دعم الأحرف العربية في البحث والفرز (`pg_trgm`)
+
+- الأرقام: عرض الأرقام بالعربية في الواجهات (`٠١٢٣٤٥٦٧٨٩`)
+
+🚀 قابلية التوسع المستقبلية:
+
+// صمّم الـ API ليكون جاهزاً لـ:
+
+- تطبيق جوال (React Native/Flutter) → استخدم نفس الـ API
+
+- تكامل مع أنظمة خارجية (وزارات، جمعيات) → وثّق الـ Webhooks
+
+- ميزات ذكية (التعرف الصوتي على التلاوة) → أضف Feature Flags
+
+🔧 أدوات التطوير الموصى بها:
+
+# Laravel
+
+composer require --dev laravel/telescope       # مراقبة الطلبات
+
+composer require --dev barryvdh/laravel-debugbar # تصحيح الأخطاء
+
+
+
+# Next.js  
+
+npm install -D @next/bundle-analyzer           # تحليل حجم الحزمة
+
+npm install -D @playwright/test                # اختبار التكامل
+
+
+
+# عام
+
+npm install -D husky lint-staged               # Git hooks للجودة
+
+🌐 دعم الهجري والتاريخ الإسلامي (اختياري لكن موصى به):// في Laravel: استخدام مكتبة دعم الهجري
+
+// composer require nesbot/carbon
+
+
+
+Carbon::setLocale('ar');
+
+$hijriDate = Carbon::now()->translatedFormat('j F Y هـ'); // 15 رمضان 1445 هـ
+
+
+
+🌟 تذكير: الجودة أهم من السرعة. ابدأ صغيراً، اختبر كل جزء، ثم توسع.
+
+🤲 دعوة: اجعل نية المشروع خالصة لخدمة كتاب الله وتسهيل حفظه.
+
+🚀 انطلق: انسخ هذا البرومبت وابدأ التنفيذ خطوة بخطوة.
+
+بالتوفيق في مشروعك المبارك! 🕌✨
+
+
+
+---
+
+
+
+## 🎁 مرفقات إضافية (للتسهيل)
+
+
+
+### 📄 ملف `.env.example` مبسط:
+
+```env
+
+# === التطبيق ===
+
+APP_NAME="Quran Admin"
+
+APP_ENV=local
+
+APP_KEY=base64:...
+
+APP_DEBUG=true
+
+APP_URL=http://localhost
+
+
+
+# === قاعدة البيانات ===
+
+DB_CONNECTION=pgsql
+
+DB_HOST=postgres
+
+DB_PORT=5432
+
+DB_DATABASE=quran_admin
+
+DB_USERNAME=quran_user
+
+DB_PASSWORD=your_secure_password_here
+
+DB_ENCRYPTION_KEY=32_char_encryption_key_here
+
+
+
+# === المصادقة ===
+
+SANCTUM_STATEFUL_DOMAINS=localhost:3000,localhost:8000
+
+DEFAULT_ADMIN_PASSWORD=ChangeMe123!
+
+
+
+# === الخدمات ===
+
+REDIS_HOST=redis
+
+REDIS_PASSWORD=null
+
+REDIS_PORT=6379
+
+
+
+# === Reverb/WebSockets ===
+
+REVERB_APP_ID=your_app_id
+
+REVERB_APP_KEY=your_app_key
+
+REVERB_APP_SECRET=your_app_secret
+
+REVERB_HOST=localhost
+
+REVERB_PORT=8080
+
+REVERB_SCHEME=http
+
+
+
+# === البريد ===
+
+MAIL_MAILER=smtp
+
+MAIL_HOST=smtp.mailtrap.io
+
+MAIL_PORT=2525
+
+MAIL_USERNAME=null
+
+MAIL_PASSWORD=null
+
+MAIL_ENCRYPTION=null
+
+MAIL_FROM_ADDRESS="noreply@quran.local"
+
+MAIL_FROM_NAME="${APP_NAME}"
+
+
+
+# === التخزين ===
+
+FILESYSTEM_DISK=local
+
+# للإنتاج: FILESYSTEM_DISK=s3 + إعدادات AWS
+
+
+
+// database/seeders/QuranDemoSeeder.php
+
+public function run(): void
+
+{
+
+    // مستخدم مسؤول افتراضي
+
+    $admin = User::firstOrCreate(
+
+        ['phone' => '0500000000'],
+
+        [
+
+            'name' => 'مدير النظام',
+
+            'password' => bcrypt(env('DEFAULT_ADMIN_PASSWORD', 'Admin@123')),
+
+            'role' => 'super_admin',
+
+            'email_verified_at' => now()
+
+        ]
+
+    );
+
+    $admin->assignRole('super_admin');
+
+
+
+    // 5 حلقات تجريبية
+
+    $circles = Circle::factory(5)->create([
+
+        'teacher_id' => fn() => User::factory()->teacher()->create()->id
+
+    ]);
+
+
+
+    // 20 طالباً مسجلين عشوائياً
+
+    User::factory(20)->student()->create()->each(function($student) use ($circles) {
+
+        $circle = $circles->random();
+
+        Enrollment::create([
+
+            'student_id' => $student->id,
+
+            'circle_id' => $circle->id,
+
+            'status' => 'active'
+
+        ]);
+
+        
+
+        // سجل حضور عشوائي لآخر 30 يوم
+
+        for ($i = 0; $i < 30; $i++) {
+
+            Attendance::create([
+
+                'enrollment_id' => Enrollment::where('student_id', $student->id)->first()->id,
+
+                'date' => now()->subDays($i),
+
+                'status' => ['present','present','present','absent','late'][array_rand([0,1,2,3,4])],
+
+                'recorded_by' => $circle->teacher_id
+
+            ]);
+
+        }
+
+    });
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

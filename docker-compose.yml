@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: qcms-db
+    restart: always
+    environment:
+      POSTGRES_DB: qcms_db
+      POSTGRES_USER: qcms_user
+      POSTGRES_PASSWORD: qcms_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - qcms_db_data:/var/lib/postgresql/data
+    networks:
+      - qcms_network
+
+  redis:
+    image: redis:alpine
+    container_name: qcms-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - qcms_network
+
+networks:
+  qcms_network:
+    driver: bridge
+
+volumes:
+  qcms_db_data:
