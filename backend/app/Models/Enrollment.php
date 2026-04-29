@@ -15,6 +15,7 @@ class Enrollment extends Model
     protected $fillable = [
         'student_id',
         'circle_id',
+        'term_id',
         'enrolled_at',
         'status',
         'notes',
@@ -32,6 +33,11 @@ class Enrollment extends Model
     public function circle(): BelongsTo
     {
         return $this->belongsTo(Circle::class);
+    }
+
+    public function term(): BelongsTo
+    {
+        return $this->belongsTo(AcademicTerm::class, 'term_id');
     }
 
     public function attendance(): HasMany

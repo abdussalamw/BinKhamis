@@ -15,6 +15,7 @@ class Attendance extends Model
 
     protected $fillable = [
         'enrollment_id',
+        'term_id',
         'date',
         'status',
         'teacher_note',
@@ -28,6 +29,11 @@ class Attendance extends Model
     public function enrollment(): BelongsTo
     {
         return $this->belongsTo(Enrollment::class);
+    }
+
+    public function term(): BelongsTo
+    {
+        return $this->belongsTo(AcademicTerm::class, 'term_id');
     }
 
     public function recorder(): BelongsTo

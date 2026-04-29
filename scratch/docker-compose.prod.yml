@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: qcms-db
+    restart: always
+    environment:
+      POSTGRES_DB: qcms
+      POSTGRES_USER: qcms_user
+      POSTGRES_PASSWORD: qcms_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - qcms-db-data:/var/lib/postgresql/data
+
+volumes:
+  qcms-db-data:

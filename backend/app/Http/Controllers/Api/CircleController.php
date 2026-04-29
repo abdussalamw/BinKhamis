@@ -9,30 +9,32 @@ use Illuminate\Http\Request;
 class CircleController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the circles.
      */
     public function index()
     {
         $circles = Circle::with('teacher')
-            ->latest()
-            ->paginate(15);
+            ->withCount(['enrollments' => function($query) {
+                $query->where('status', 'active');
+            }])
+            ->get();
             
         return response()->json($circles);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created circle.
      */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'description' => 'nullable|string',
-            'location' => 'required|string',
-            'schedule' => 'required|array',
+            'name' => 'required|string|max:255',
+            'location' => 'required|string|max:255',
+            'teacher_id' => 'required|exists:users,id',
             'capacity' => 'required|integer|min:1',
-            'teacher_id' => 'required|uuid|exists:users,id',
             'is_active' => 'boolean',
+            'description' => 'nullable|string',
+            'schedule' => 'nullable|array',
         ]);
 
         $circle = Circle::create($validated);
@@ -41,29 +43,36 @@ class CircleController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified circle with enrollments.
      */
     public function show(string $id)
     {
-        $circle = Circle::with(['teacher', 'enrollments.student'])->findOrFail($id);
+        $circle = Circle::with(['teacher', 'enrollments' => function($query) {
+                $query->where('status', 'active')->with('student.profile');
+            }])
+            ->withCount(['enrollments' => function($query) {
+                $query->where('status', 'active');
+            }])
+            ->findOrFail($id);
+            
         return response()->json($circle);
     }
 
     /**
-     * Update the specified resource in storage.
+     * Update the specified circle.
      */
     public function update(Request $request, string $id)
     {
         $circle = Circle::findOrFail($id);
-        
+
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:100',
-            'description' => 'nullable|string',
-            'location' => 'sometimes|required|string',
-            'schedule' => 'sometimes|required|array',
+            'name' => 'sometimes|required|string|max:255',
+            'location' => 'sometimes|required|string|max:255',
+            'teacher_id' => 'sometimes|required|exists:users,id',
             'capacity' => 'sometimes|required|integer|min:1',
-            'teacher_id' => 'sometimes|required|uuid|exists:users,id',
             'is_active' => 'boolean',
+            'description' => 'nullable|string',
+            'schedule' => 'nullable|array',
         ]);
 
         $circle->update($validated);
@@ -72,13 +81,21 @@ class CircleController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified circle.
      */
     public function destroy(string $id)
     {
         $circle = Circle::findOrFail($id);
-        $circle->delete();
         
+        // Prevent deletion if there are students enrolled
+        if ($circle->enrollments()->count() > 0) {
+            return response()->json([
+                'message' => 'لا يمكن حذف الحلقة لوجود طلاب مسجلين بها. يرجى نقل الطلاب أولاً.'
+            ], 422);
+        }
+
+        $circle->delete();
+
         return response()->json(['message' => 'تم حذف الحلقة بنجاح']);
     }
 }

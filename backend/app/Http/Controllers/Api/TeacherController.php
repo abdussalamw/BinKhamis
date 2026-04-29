@@ -20,7 +20,7 @@ class TeacherController extends Controller
         $teachers = User::where('role', 'teacher')
             ->with('profile')
             ->latest()
-            ->paginate(15);
+            ->get(); // Changed to get() to match frontend expectations
             
         return response()->json($teachers);
     }
@@ -32,13 +32,10 @@ class TeacherController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:users,email',
             'phone' => 'required|string|unique:users,phone',
-            'birth_date' => 'nullable|date',
-            'gender' => 'required|in:M,F',
+            'email' => 'nullable|email|unique:users,email',
             'specialization' => 'nullable|string|max:100',
-            'hire_date' => 'nullable|date',
-            'bio' => 'nullable|string',
+            'national_id' => 'nullable|string',
         ]);
 
         try {
@@ -54,11 +51,8 @@ class TeacherController extends Controller
 
                 $user->profile()->create([
                     'type' => 'teacher',
-                    'birth_date' => $validated['birth_date'] ?? null,
-                    'gender' => $validated['gender'],
                     'specialization' => $validated['specialization'] ?? null,
-                    'hire_date' => $validated['hire_date'] ?? null,
-                    'bio' => $validated['bio'] ?? null,
+                    'national_id' => $validated['national_id'] ?? null,
                 ]);
 
                 return response()->json($user->load('profile'), 201);
@@ -89,22 +83,17 @@ class TeacherController extends Controller
         
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|nullable|email|unique:users,email,' . $id,
             'phone' => 'sometimes|required|string|unique:users,phone,' . $id,
-            'birth_date' => 'nullable|date',
-            'gender' => 'sometimes|required|in:M,F',
-            'specialization' => 'nullable|string|max:100',
-            'hire_date' => 'nullable|date',
-            'bio' => 'nullable|string',
+            'specialization' => 'nullable|string',
+            'national_id' => 'nullable|string',
         ]);
 
         try {
             DB::transaction(function () use ($teacher, $validated) {
-                $teacher->update(collect($validated)->only(['name', 'email', 'phone'])->toArray());
+                $teacher->update(collect($validated)->only(['name', 'phone'])->toArray());
 
-                $teacher->profile()->update(collect($validated)->only([
-                    'birth_date', 'gender', 'specialization', 'hire_date', 'bio'
-                ])->toArray());
+                $profileFields = collect($validated)->except(['name', 'phone'])->toArray();
+                $teacher->profile()->update($profileFields);
             });
 
             return response()->json($teacher->load('profile'));

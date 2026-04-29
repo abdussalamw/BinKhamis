@@ -1,0 +1,10 @@
+location /api {
+    alias /home/user/web/binkamis.3ezit.com/repo/backend/public;
+    try_files $uri $uri/ /api/index.php?$query_string;
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /home/user/web/binkamis.3ezit.com/repo/backend/public/index.php;
+        fastcgi_pass unix:/run/php/php8.4-fpm.sock;
+    }
+}

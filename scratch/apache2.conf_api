@@ -1,0 +1,10 @@
+Alias /api /home/user/web/binkamis.3ezit.com/repo/backend/public
+<Directory /home/user/web/binkamis.3ezit.com/repo/backend/public>
+    AllowOverride All
+    Require all granted
+    Options +FollowSymLinks
+    
+    <FilesMatch \.php$>
+        SetHandler "proxy:unix:/run/php/php8.4-fpm-binkamis.3ezit.com.sock|fcgi://localhost"
+    </FilesMatch>
+</Directory>
