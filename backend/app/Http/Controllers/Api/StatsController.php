@@ -21,13 +21,15 @@ class StatsController extends Controller
         
         // Attendance percentage for today
         $today = Carbon::today();
-        $presentToday = Attendance::whereDate('date', $today)->where('status', 'present')->count();
-        $totalAttendanceRecordsToday = Attendance::whereDate('date', $today)->count();
-        $attendanceRate = $totalAttendanceRecordsToday > 0 
-            ? round(($presentToday / $totalAttendanceRecordsToday) * 100, 1) 
+        $attendanceStats = Attendance::whereDate('date', $today)
+            ->select(DB::raw('count(*) as total'), DB::raw("count(case when status='present' then 1 else null end) as present"))
+            ->first();
+            
+        $attendanceRate = ($attendanceStats->total > 0) 
+            ? round(($attendanceStats->present / $attendanceStats->total) * 100, 1) 
             : 0;
 
-        $totalProgress = ProgressTracking::count();
+        $totalProgress = ProgressTracking::sum('pages_count') ?? 0;
 
         return response()->json([
             'overview' => [
@@ -50,11 +52,12 @@ class StatsController extends Controller
             $total = Attendance::whereDate('date', $date)->count();
             
             $rate = $total > 0 ? round(($present / $total) * 100) : 0;
+            $progress = ProgressTracking::whereDate('completion_date', $date)->sum('pages_count') ?? 0;
             
             $data[] = [
                 'name' => $days[$date->dayOfWeek],
                 'attendance' => $rate,
-                'progress' => rand(60, 95), 
+                'progress' => $progress, 
             ];
         }
 

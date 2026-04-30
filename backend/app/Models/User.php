@@ -10,11 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasUuids, SoftDeletes;
+    use HasFactory, Notifiable, HasUuids, SoftDeletes, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -30,6 +32,7 @@ class User extends Authenticatable
         'avatar',
         'is_active',
         'last_login_at',
+        'api_token',
     ];
 
     /**
@@ -40,6 +43,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'api_token',
     ];
 
     /**
@@ -52,7 +56,23 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_active' => 'boolean',
+            'last_login_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Custom token generation to avoid Sanctum environment issues
+     */
+    public function createToken(string $name)
+    {
+        $token = Str::random(80);
+        $this->update(['api_token' => hash('sha256', $token)]);
+        
+        return new class($token) {
+            public $plainTextToken;
+            public function __construct($token) { $this->plainTextToken = $token; }
+        };
     }
 
     public function profile(): HasOne

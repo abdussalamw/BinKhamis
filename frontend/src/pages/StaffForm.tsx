@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
   ChevronLeft, Save, ShieldCheck, User, 
-  Phone, Mail, CreditCard, Briefcase,
+  Mail, CreditCard, Briefcase,
   Key, AlertCircle, Power
 } from 'lucide-react';
 
@@ -19,17 +19,29 @@ const StaffForm: React.FC = () => {
     name: '',
     email: '',
     phone: '',
-    role: 'teacher' as 'teacher' | 'admin' | 'manager',
+    role: 'teacher' as 'teacher' | 'admin' | 'manager' | 'supervisor',
     is_active: true,
     bank_account_number: '',
     specialization: '',
     qualification: '',
-    password: '', // Only for creation or if explicitly changing
+    password: '',
+    allowed_circles: [] as string[],
+    circle_id: '', // For teachers
   });
 
+  const [allCircles, setAllCircles] = useState<any[]>([]);
+
   useEffect(() => {
+    fetchCircles();
     if (isEdit) fetchStaffData();
   }, [id]);
+
+  const fetchCircles = async () => {
+    try {
+      const res = await api.get('/circles');
+      setAllCircles(res.data.data || res.data);
+    } catch (e) { console.error(e); }
+  };
 
   const fetchStaffData = async () => {
     try {
@@ -46,7 +58,9 @@ const StaffForm: React.FC = () => {
         bank_account_number: profile.bank_account_number || '',
         specialization: profile.specialization || '',
         qualification: profile.qualification || '',
-        password: '', // Don't fetch password
+        password: '',
+        allowed_circles: data.allowed_circles || [],
+        circle_id: data.circle_id || '',
       });
     } catch (error) {
       console.error('Error fetching staff member:', error);
@@ -151,7 +165,7 @@ const StaffForm: React.FC = () => {
               >
                 <option value="teacher">معلم</option>
                 <option value="admin">إداري</option>
-                <option value="manager">مشرف</option>
+                <option value="supervisor">مشرف</option>
               </select>
             </div>
             <div className="space-y-2">
@@ -164,6 +178,45 @@ const StaffForm: React.FC = () => {
               />
             </div>
           </div>
+
+          {formData.role === 'teacher' && (
+            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+               <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2 text-indigo-600">الحلقة المسؤولة</label>
+               <select 
+                className="w-full px-5 py-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/20 outline-none font-bold text-slate-700 dark:text-white transition-all"
+                value={formData.circle_id}
+                onChange={e => setFormData({...formData, circle_id: e.target.value})}
+              >
+                <option value="">-- اختر الحلقة --</option>
+                {allCircles.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {formData.role === 'supervisor' && (
+            <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+               <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2 text-indigo-600">الحلقات المسموح بمتابعتها</label>
+               <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800">
+                  {allCircles.map(c => (
+                    <label key={c.id} className="flex items-center gap-2 cursor-pointer group">
+                       <input 
+                        type="checkbox"
+                        className="w-4 h-4 rounded-lg border-none text-indigo-600 focus:ring-transparent cursor-pointer"
+                        checked={formData.allowed_circles.includes(c.id)}
+                        onChange={(e) => {
+                          const circles = e.target.checked 
+                            ? [...formData.allowed_circles, c.id]
+                            : formData.allowed_circles.filter(id => id !== c.id);
+                          setFormData({...formData, allowed_circles: circles});
+                        }}
+                       />
+                       <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 group-hover:text-indigo-600 transition-colors">{c.name}</span>
+                    </label>
+                  ))}
+               </div>
+               <p className="text-[9px] font-bold text-slate-400 mr-2">في حال عدم اختيار أي حلقة، سيتمكن المشرف من رؤية جميع الحلقات.</p>
+            </div>
+          )}
         </div>
 
         {/* Administrative Details */}

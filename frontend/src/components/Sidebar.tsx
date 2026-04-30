@@ -9,9 +9,10 @@ import {
   ChevronRight,
   LogOut,
   BarChart3,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -20,63 +21,72 @@ interface SidebarProps {
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { pathname } = location;
 
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const role = user?.role || 'student';
+
   const menuItems = [
-    { title: 'الرئيسية', icon: LayoutDashboard, path: '/' },
-    { title: 'الطلاب', icon: Users, path: '/students' },
-    { title: 'المعلمين والإداريين', icon: ShieldCheck, path: '/staff' },
-    { title: 'الحلقات', icon: BookOpen, path: '/circles' },
-    { title: 'التحضير', icon: Calendar, path: '/attendance' },
-    { title: 'تتبع الحفظ', icon: TrendingUp, path: '/progress' },
-    { title: 'التقارير', icon: BarChart3, path: '/reports' },
-    { title: 'استيراد البيانات', icon: Upload, path: '/import' },
-    { title: 'الإعدادات', icon: SettingsIcon, path: '/settings' },
+    { title: 'لوحة التحكم', icon: LayoutDashboard, path: '/', roles: ['admin', 'supervisor', 'teacher', 'student'] },
+    { title: 'ملفي الشخصي', icon: Users, path: '/student-profile', roles: ['student'] },
+    { title: 'إدارة الطلاب', icon: Users, path: '/students', roles: ['admin', 'supervisor'] },
+    { title: 'فريق العمل', icon: ShieldCheck, path: '/staff', roles: ['admin', 'supervisor'] },
+    { title: 'الحلقات القرآنية', icon: BookOpen, path: '/circles', roles: ['admin', 'supervisor', 'teacher'] },
+    { title: 'سجل الحضور', icon: Calendar, path: '/attendance', roles: ['admin', 'supervisor', 'teacher'] },
+    { title: 'متابعة الحفظ', icon: TrendingUp, path: '/progress', roles: ['admin', 'supervisor', 'teacher'] },
+    { title: 'مركز التقارير', icon: BarChart3, path: '/reports', roles: ['admin', 'supervisor', 'teacher'] },
   ];
+
+  const filteredItems = menuItems.filter(item => item.roles.includes(role));
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/auth/signin');
+  };
 
   return (
     <aside
-      className={`fixed right-0 top-0 z-50 flex h-screen w-72.5 flex-col overflow-y-hidden bg-white shadow-2xl transition-all duration-300 ease-in-out dark:bg-slate-900 lg:static lg:translate-x-0 ${
+      className={`fixed right-0 top-0 z-50 flex h-screen w-64 flex-col overflow-y-hidden bg-white/70 backdrop-blur-3xl border-l border-white/40 shadow-[10px_0_40px_rgba(0,0,0,0.02)] transition-all duration-500 ease-in-out dark:bg-midnight/80 dark:border-white/5 lg:static lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
       }`}
     >
-      {/* Sidebar Header */}
-      <div className="flex items-center justify-between gap-2 px-8 py-8 lg:py-10">
-        <NavLink to="/" className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-                <span className="text-xl font-bold text-white">ق</span>
-            </div>
-            <span className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">بن خميس</span>
-        </NavLink>
+      {/* Sidebar Header - Simplified */}
+      <div className="flex items-center justify-center py-6 border-b border-slate-50 dark:border-white/5 mb-4 lg:hidden">
         <button
           onClick={() => setSidebarOpen(false)}
-          className="block lg:hidden text-slate-500 hover:text-primary"
+          className="text-slate-400 hover:text-primary transition-colors"
         >
           <ChevronRight size={24} />
         </button>
       </div>
 
-      <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear flex-grow px-4">
-        <nav className="mt-2">
-          <div className="space-y-1">
-            <h3 className="mb-4 pr-4 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+      <div className="no-scrollbar flex flex-col overflow-y-auto flex-grow px-6">
+        <nav className="mt-4">
+          <div className="space-y-2">
+            <h3 className="mb-6 pr-4 text-[11px] font-black uppercase tracking-[0.3em] text-slate-300 dark:text-slate-600">
               القائمة الرئيسية
             </h3>
-            <ul className="flex flex-col gap-2">
-              {menuItems.map((item) => (
+            <ul className="flex flex-col gap-3">
+              {filteredItems.map((item) => (
                 <li key={item.path}>
                   <NavLink
                     to={item.path}
-                    className={`group relative flex items-center gap-3.5 rounded-xl px-4 py-3 font-semibold transition-all duration-300 ease-in-out ${
-                      pathname === item.path
-                        ? 'bg-primary/10 text-primary shadow-sm'
-                        : 'text-slate-600 hover:bg-slate-50 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800'
-                    }`}
+                    className={({ isActive }) => `
+                      group relative flex items-center gap-3 rounded-xl px-4 py-3 font-black transition-all duration-500
+                      ${isActive
+                        ? 'bg-primary text-white shadow-md shadow-primary/20'
+                        : 'text-slate-500 hover:bg-slate-50 hover:translate-x-[-5px] dark:text-slate-400 dark:hover:bg-white/5'
+                      }
+                    `}
                   >
-                    <item.icon size={20} className={`${pathname === item.path ? 'text-primary' : 'text-slate-400 group-hover:text-primary'}`} />
-                    {item.title}
-                    {pathname === item.path && (
-                        <div className="absolute left-0 h-6 w-1 rounded-r-full bg-primary animate-pulse-slow"></div>
+                    <item.icon size={18} className="transition-transform group-hover:scale-110" />
+                    <span className="text-xs">{item.title}</span>
+                    
+                    {!pathname.includes(item.path) && (
+                        <Sparkles className="absolute left-4 opacity-0 group-hover:opacity-40 transition-opacity" size={14} />
                     )}
                   </NavLink>
                 </li>
@@ -86,15 +96,16 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         </nav>
       </div>
 
-      {/* Sidebar Footer */}
-      <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-        <button className="flex w-full items-center gap-3.5 rounded-xl px-4 py-3 font-semibold text-danger hover:bg-danger/5 transition-all">
-          <LogOut size={20} />
-          تسجيل الخروج
-        </button>
+      {/* Sidebar Footer - Compact Credits */}
+      <div className="px-6 pb-8 mt-auto">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex items-center gap-3">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">النظام يعمل بكفاءة</span>
+          </div>
       </div>
     </aside>
   );
 };
 
 export default Sidebar;
+

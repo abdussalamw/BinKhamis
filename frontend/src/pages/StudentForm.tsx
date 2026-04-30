@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
-  ChevronLeft, Save, User, Phone, 
-  MapPin, ShieldCheck, Mail, Calendar,
-  CreditCard, GraduationCap, School, Book
+  ChevronLeft, Save, User, 
+  ShieldCheck, GraduationCap, School, Book
 } from 'lucide-react';
 
 const StudentForm: React.FC = () => {

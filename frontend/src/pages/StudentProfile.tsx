@@ -46,15 +46,38 @@ const StudentProfile: React.FC = () => {
   const navigate = useNavigate();
   const [student, setStudent] = useState<StudentProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
+
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const role = user?.role || 'student';
 
   useEffect(() => {
+    // 1. Initial check for students
+    if (role === 'student' && id !== user?.id) {
+      setAccessDenied(true);
+      setLoading(false);
+      return;
+    }
     fetchStudentData();
   }, [id]);
 
   const fetchStudentData = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(`/students/${id}`);
-      setStudent(response.data);
+      const data = response.data;
+      
+      // 2. Secondary check for Teachers/Supervisors after data is fetched
+      const studentCircleId = data.enrollments?.[0]?.circle?.id;
+      
+      if (role === 'teacher' && user?.circle_id && studentCircleId !== user.circle_id) {
+        setAccessDenied(true);
+      } else if (role === 'supervisor' && user?.allowed_circles?.length > 0 && !user.allowed_circles.includes(studentCircleId)) {
+         setAccessDenied(true);
+      } else {
+        setStudent(data);
+      }
     } catch (error) {
       console.error('Error fetching student profile:', error);
     } finally {
@@ -69,10 +92,21 @@ const StudentProfile: React.FC = () => {
     </div>
   );
 
+  if (accessDenied) return (
+    <div className="py-24 text-center max-w-lg mx-auto">
+      <div className="h-20 w-20 bg-danger/10 text-danger rounded-3xl flex items-center justify-center mx-auto mb-6">
+        <ShieldCheck size={48} />
+      </div>
+      <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">وصول مقيد</h2>
+      <p className="text-slate-500 font-bold mb-8">عذراً، لا تملك الصلاحيات الكافية لعرض بيانات هذا الطالب.</p>
+      <button onClick={() => navigate(-1)} className="px-8 py-3 bg-primary text-white rounded-2xl font-black shadow-lg shadow-primary/20">العودة للخلف</button>
+    </div>
+  );
+
   if (!student) return (
     <div className="py-20 text-center">
       <h2 className="text-2xl font-black text-danger mb-4">عذراً، لم يتم العثور على الطالب</h2>
-      <Link to="/students" className="text-primary font-bold hover:underline">العودة لقائمة الطلاب</Link>
+      <Link to="/" className="text-primary font-bold hover:underline">العودة للرئيسية</Link>
     </div>
   );
 
@@ -89,13 +123,15 @@ const StudentProfile: React.FC = () => {
           العودة لقاعدة البيانات
         </Link>
         <div className="flex gap-3">
-          <button 
-            onClick={() => navigate(`/students/edit/${student.id}`)}
-            className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all shadow-sm"
-          >
-            <Edit3 size={18} />
-            تعديل البيانات
-          </button>
+          {(role === 'admin' || role === 'supervisor') && (
+            <button 
+              onClick={() => navigate(`/students/edit/${student.id}`)}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <Edit3 size={18} />
+              تعديل البيانات
+            </button>
+          )}
           <button className="px-6 py-3 rounded-2xl bg-primary text-white font-black hover:bg-primary-dark transition-all shadow-lg shadow-primary/30">تقرير الإنجاز</button>
         </div>
       </div>

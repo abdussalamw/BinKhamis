@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
   ChevronLeft, Save, Users, MapPin, 
-  Clock, ShieldCheck, UserCircle, 
+  ShieldCheck, UserCircle, 
   Trash2, AlertCircle
 } from 'lucide-react';
 

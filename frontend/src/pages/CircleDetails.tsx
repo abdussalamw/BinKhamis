@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
-  ChevronRight, Users, User as UserIcon, Phone, 
-  ArrowRight, Award, MapPin, Calendar, 
+  ChevronRight, Users, 
+  Award, MapPin, 
   Settings, CheckCircle, Info, UserPlus, FileText
 } from 'lucide-react';
 

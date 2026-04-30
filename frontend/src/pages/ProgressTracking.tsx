@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../services/api';
 import type { Student } from '../schema';
-import { Book, Award, Clock, Plus, Search, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Book, Clock, Plus, Search, ChevronDown, CheckCircle2 } from 'lucide-react';
 
 interface ProgressRecord {
   id: string;

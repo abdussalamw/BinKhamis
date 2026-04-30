@@ -1,50 +1,109 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700&family=Outfit:wght@100;300;400;500;600;700;800;900&display=swap');
 
 @theme {
-  --font-cairo: "Cairo", sans-serif;
-  --color-primary: #4e73df;
-  --color-danger: #e74a3b;
-  --color-success: #1cc88a;
+  --font-readex: "Readex Pro", "Outfit", sans-serif;
+  --color-primary: #0d9488;    /* Modern Teal */
+  --color-secondary: #fb7185;  /* Coral */
+  --color-accent: #f59e0b;     /* Amber */
+  --color-danger: #ef4444;
+  --color-success: #10b981;
+  --color-midnight: #0a0f1d;
+  --color-mint-light: #f6fcf9;
 }
 
 @layer base {
   body {
-    @apply font-cairo bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+    @apply font-readex bg-mint-light text-slate-900 dark:bg-midnight dark:text-slate-100 selection:bg-primary/20;
     direction: rtl;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  /* Mesh Gradient Background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(at 0% 0%, rgba(13, 148, 136, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(251, 113, 133, 0.05) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.05) 0px, transparent 50%);
+    z-index: -1;
+    pointer-events: none;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl dark:bg-slate-900/80 dark:border-slate-800/50;
+    @apply bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_4px_20px_rgba(0,0,0,0.03)] rounded-[1.25rem] transition-all duration-500 hover:shadow-[0_15px_35px_rgba(13,148,136,0.08)] dark:bg-slate-900/40 dark:border-white/5;
+  }
+
+  .glass-card-premium {
+    @apply bg-white/60 backdrop-blur-2xl border border-white/40 shadow-[0_4px_20px_rgba(0,0,0,0.03)] rounded-[1.25rem] transition-all duration-500 hover:shadow-[0_15px_35px_rgba(13,148,136,0.08)] dark:bg-slate-900/40 dark:border-white/5 relative overflow-hidden;
+    /* Reduced Internal Glow */
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3), 0 4px 20px rgba(0,0,0,0.03);
+  }
+
+  @media (max-width: 640px) {
+    .glass-card-premium {
+      @apply rounded-[1rem] p-4;
+    }
+  }
+
+  .dark .glass-card-premium {
+    box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.01), 0 4px 20px rgba(0,0,0,0.1);
+  }
+
+  .gradient-border {
+    position: relative;
+    border-radius: 1rem;
+    padding: 1px;
+    background: linear-gradient(135deg, #0d9488, #fb7185, #f59e0b);
   }
   
-  .animate-bounce-slow {
-    animation: bounce 3s infinite;
+  .gradient-border > div {
+    @apply bg-white dark:bg-slate-900 rounded-[0.9rem];
   }
-  
-  .animate-pulse-slow {
-    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  .text-giant-number {
+    @apply absolute -bottom-4 -left-2 text-6xl md:text-7xl font-black opacity-[0.02] pointer-events-none select-none italic;
+  }
+
+  .pill-row {
+    @apply flex items-center p-3 rounded-2xl bg-white/40 border border-white/60 mb-2 transition-all hover:translate-x-[-5px] hover:bg-white/80 dark:bg-white/5 dark:border-white/5 dark:hover:bg-white/10;
+  }
+
+  .btn-creative {
+    @apply relative px-6 py-2.5 rounded-xl font-black text-sm text-white bg-primary shadow-md shadow-primary/20 transition-all hover:scale-105 active:scale-95;
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+  }
+
+  .floating-icon {
+    @apply absolute -top-3 -right-3 w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-lg md:rounded-xl shadow-lg transition-transform hover:rotate-12;
   }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.6s ease-out forwards;
-}
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
   @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-200 dark:bg-slate-800 rounded-full hover:bg-primary/30 transition-colors;
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full border-4 border-transparent bg-clip-padding hover:bg-primary/50 transition-colors;
 }
+
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+

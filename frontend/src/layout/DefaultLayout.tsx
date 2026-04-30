@@ -7,7 +7,7 @@ const DefaultLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="dark:bg-slate-900 dark:text-slate-100 min-h-screen font-cairo" dir="rtl">
+    <div className="dark:bg-slate-900 dark:text-slate-100 min-h-screen font-readex" dir="rtl">
       {/* <!-- ===== Page Wrapper Start ===== --> */}
       <div className="flex h-screen overflow-hidden">
         {/* <!-- ===== Sidebar Start ===== --> */}

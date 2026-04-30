@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../services/api';
 import { 
-  Search, Filter, MoreHorizontal, Eye, Edit3, 
-  UserPlus, FileDown, ShieldCheck, UserCheck,
-  Phone, CreditCard, Mail, Briefcase, 
+  Search, Filter, Eye, Edit3, 
+  UserPlus, FileDown, ShieldCheck,
+  Phone, CreditCard, Mail, 
   Power, PowerOff, CheckCircle2, XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +13,7 @@ interface StaffData {
   name: string;
   phone: string;
   email: string;
-  role: 'admin' | 'teacher' | 'manager';
+  role: 'admin' | 'teacher' | 'supervisor';
   is_active: boolean;
   profile?: {
     bank_account_number: string | null;
@@ -121,7 +121,7 @@ const StaffList: React.FC = () => {
             <option value="">كل الفئات</option>
             <option value="teacher">معلم</option>
             <option value="admin">إداري</option>
-            <option value="manager">مشرف</option>
+            <option value="supervisor">مشرف</option>
           </select>
         </div>
       </div>
@@ -161,7 +161,7 @@ const StaffList: React.FC = () => {
                         <div>
                             <h5 className={`font-black text-base leading-tight ${member.is_active ? 'text-slate-800 dark:text-white' : 'text-slate-400'}`}>{member.name}</h5>
                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter">
-                              {member.role === 'teacher' ? 'معلم حلقة' : member.role === 'admin' ? 'إداري نظام' : 'مشرف عام'}
+                                {member.role === 'teacher' ? 'معلم حلقة' : member.role === 'admin' ? 'إداري نظام' : 'مشرف حلقات'}
                             </span>
                         </div>
                       </div>
