@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, LineChart, Line, PieChart, Pie, 
+  Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, PieChart, Pie, 
   Cell, ComposedChart, Area
 } from 'recharts';
 import { 
-  Calendar, TrendingUp, Users, 
+  Calendar, Users, 
   Award, Search, ChevronLeft,
-  LayoutDashboard, Map, Printer, Sparkles
+  LayoutDashboard, Map
 } from 'lucide-react';
 import api from '../services/api';
 

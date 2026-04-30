@@ -1,36 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Settings as SettingsIcon, 
-  Shield, 
-  Database, 
-  Save, 
-  User, 
-  Moon, 
-  Sun,
-  Smartphone,
-  Globe,
-  Palette,
-  RefreshCw,
-  Power,
-  Send,
-  QrCode,
-  MessageSquare,
-  AlertCircle,
-  CheckCircle2,
-  Trash2,
-  Lock,
-  History,
-  Loader2,
-  X,
-  Upload,
-  Key,
-  Download,
-  BellRing,
-  FileText,
-  AlertTriangle,
-  CheckCircle,
-  Sparkles,
-  Zap
+  Settings as SettingsIcon, Shield, Database, Save, Smartphone, RefreshCw, Power, QrCode, AlertCircle, CheckCircle2, Trash2, History, Loader2, X, Upload, Key, Download, BellRing, FileText, AlertTriangle, CheckCircle, Sparkles, Zap, Lock
 } from 'lucide-react';
 import api from '../services/api';
 

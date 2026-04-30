@@ -3,7 +3,7 @@ import axios from '../services/api';
 import { 
   Search, Filter, MoreHorizontal, Eye, Edit3, 
   UserPlus, FileDown, UserCheck, Users, 
-  MapPin, GraduationCap, X, ChevronDown
+  MapPin, GraduationCap, ChevronDown
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -220,7 +220,7 @@ const StudentList: React.FC = () => {
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((student, idx) => (
+                filteredStudents.map((student) => (
                   <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors group">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-4">

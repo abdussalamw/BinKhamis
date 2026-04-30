@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Lock, 
   Phone, 
   Loader2, 
   ChevronLeft, 
@@ -74,7 +73,7 @@ const SignIn: React.FC = () => {
     }
   };
 
-  const instantDemoLogin = async (demoPhone: string, roleName: string) => {
+  const instantDemoLogin = async (demoPhone: string) => {
     setLoading(true);
     setPhone(demoPhone);
     setMode('login');
@@ -211,7 +210,7 @@ const SignIn: React.FC = () => {
                         <button 
                             key={i}
                             type="button" 
-                            onClick={() => instantDemoLogin(demo.phone, demo.label)} 
+                            onClick={() => instantDemoLogin(demo.phone)} 
                             className="flex items-center gap-3 p-3 rounded-xl bg-slate-50/50 dark:bg-white/5 border border-slate-100 dark:border-white/5 hover:border-primary/20 hover:bg-primary/5 transition-all group text-right"
                         >
                           <div className="h-8 w-8 shrink-0 rounded-lg bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
