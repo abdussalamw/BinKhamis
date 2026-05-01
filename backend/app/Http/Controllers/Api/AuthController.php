@@ -123,8 +123,12 @@ class AuthController extends Controller
         // Load roles and permissions
         $user->load('roles', 'permissions');
 
-        // Generate Token
-        $token = $user->createToken('auth_token')->plainTextToken;
+        // Generate Token (Legacy System)
+        $token = Str::random(60);
+        $user->update([
+            'api_token' => hash('sha256', $token),
+            'last_login_at' => Carbon::now()
+        ]);
 
         return response()->json([
             'success' => true,
@@ -135,8 +139,8 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'phone' => $user->phone,
-                'role' => $user->role, // Legacy role field
-                'roles' => $user->roles->pluck('name'), // Spatie roles
+                'role' => $user->role,
+                'roles' => $user->roles->pluck('name'),
                 'avatar' => $user->avatar,
             ]
         ]);
