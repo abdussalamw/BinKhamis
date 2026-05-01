@@ -14,13 +14,9 @@ class ApiTokenMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        file_put_contents('/tmp/api_debug.txt', "Request: " . $request->fullUrl() . " - Auth: " . $request->header('Authorization') . "\n", FILE_APPEND);
-        
         $header = $request->header('Authorization');
         $token = null;
 
-        \Log::debug('ApiTokenMiddleware Headers:', $request->headers->all());
-        
         if ($header && preg_match('/Bearer\s+(.*)$/i', $header, $matches)) {
             $token = $matches[1];
         } elseif ($request->has('api_token')) {
