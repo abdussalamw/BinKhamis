@@ -14,6 +14,8 @@ class ApiTokenMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        file_put_contents('/home/user/web/binkamis.3ezit.com/public_html/api_debug.txt', "Request: " . $request->fullUrl() . " - Auth: " . $request->header('Authorization') . "\n", FILE_APPEND);
+        
         $header = $request->header('Authorization');
         $token = null;
 
