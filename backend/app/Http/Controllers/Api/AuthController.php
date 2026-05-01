@@ -142,7 +142,9 @@ class AuthController extends Controller
                 'role' => $user->role,
                 'roles' => $user->roles->pluck('name'),
                 'avatar' => $user->avatar,
-            ]
+            ],
+            'debug_mode' => true,
+            'server_time' => now()->toDateTimeString()
         ]);
     }
 
