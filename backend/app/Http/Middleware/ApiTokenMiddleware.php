@@ -24,6 +24,7 @@ class ApiTokenMiddleware
         }
 
         if (!$token) {
+            \Log::warning('ApiTokenMiddleware: Missing token in request');
             return response()->json(['message' => 'Unauthorized: Missing token'], 401);
         }
 
@@ -31,8 +32,11 @@ class ApiTokenMiddleware
         $user = User::where('api_token', $hashedToken)->first();
 
         if (!$user) {
+            \Log::error('ApiTokenMiddleware: Invalid token provided', ['token_prefix' => substr($token, 0, 5)]);
             return response()->json(['message' => 'Unauthorized: Invalid token'], 401);
         }
+
+        \Log::info('ApiTokenMiddleware: User authenticated', ['user_id' => $user->id]);
 
         // Log the user in for this request
         auth()->login($user);
