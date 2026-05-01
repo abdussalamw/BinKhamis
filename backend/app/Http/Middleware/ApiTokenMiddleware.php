@@ -17,6 +17,8 @@ class ApiTokenMiddleware
         $header = $request->header('Authorization');
         $token = null;
 
+        \Log::debug('ApiTokenMiddleware Headers:', $request->headers->all());
+        
         if ($header && preg_match('/Bearer\s+(.*)$/i', $header, $matches)) {
             $token = $matches[1];
         } elseif ($request->has('api_token')) {
