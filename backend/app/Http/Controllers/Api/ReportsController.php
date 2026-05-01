@@ -29,15 +29,21 @@ class ReportsController extends Controller
         $totalProgress = ProgressTracking::count();
         $avgProgress = $totalStudents > 0 ? round($totalProgress / $totalStudents, 1) : 0;
 
-        // 2. Monthly Trend
         $monthlyProgress = [];
         for ($i = 5; $i >= 0; $i--) {
             $date = Carbon::now()->subMonths($i);
+            $month = $date->month;
+            $year = $date->year;
+            
             $monthlyProgress[] = [
                 'name' => $date->translatedFormat('F'),
-                'achievements' => ProgressTracking::whereMonth('date', $date->month)->whereYear('date', $date->year)->count(),
+                'achievements' => ProgressTracking::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
+                    ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year])
+                    ->count(),
                 'attendance' => $this->getAttendanceRateForMonth($date),
-                'students' => User::where('role', 'student')->where('created_at', '<=', $date->endOfMonth())->count()
+                'students' => User::where('role', 'student')
+                    ->whereRaw("created_at::date <= ?", [$date->endOfMonth()->toDateString()])
+                    ->count()
             ];
         }
 
@@ -154,9 +160,20 @@ class ReportsController extends Controller
 
     private function getAttendanceRateForMonth($date)
     {
-        $q = Attendance::whereMonth('date', $date->month)->whereYear('date', $date->year);
-        $total = $q->count();
+        $month = $date->month;
+        $year = $date->year;
+        
+        $total = Attendance::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
+            ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year])
+            ->count();
+            
         if ($total == 0) return 0;
-        return round(($q->where('status', 'present')->count() / $total) * 100, 1);
+        
+        $present = Attendance::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
+            ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year])
+            ->where('status', 'present')
+            ->count();
+            
+        return round(($present / $total) * 100, 1);
     }
 }
