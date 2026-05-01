@@ -19,7 +19,7 @@ class ProgressTracking extends Model
         'surah_number',
         'start_verse',
         'end_verse',
-        'completion_date',
+        'date',
         'quality_rating',
         'teacher_id',
         'notes',
@@ -27,7 +27,8 @@ class ProgressTracking extends Model
     ];
 
     protected $casts = [
-        'completion_date' => 'date',
+        'date' => 'date',
+        'quality_rating' => 'integer',
     ];
 
     public function student(): BelongsTo

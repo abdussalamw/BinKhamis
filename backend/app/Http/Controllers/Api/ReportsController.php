@@ -35,7 +35,7 @@ class ReportsController extends Controller
             $date = Carbon::now()->subMonths($i);
             $monthlyProgress[] = [
                 'name' => $date->translatedFormat('F'),
-                'achievements' => ProgressTracking::whereMonth('completion_date', $date->month)->whereYear('completion_date', $date->year)->count(),
+                'achievements' => ProgressTracking::whereMonth('date', $date->month)->whereYear('date', $date->year)->count(),
                 'attendance' => $this->getAttendanceRateForMonth($date),
                 'students' => User::where('role', 'student')->where('created_at', '<=', $date->endOfMonth())->count()
             ];

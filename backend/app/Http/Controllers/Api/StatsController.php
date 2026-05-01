@@ -52,7 +52,7 @@ class StatsController extends Controller
             $total = Attendance::whereDate('date', $date)->count();
             
             $rate = $total > 0 ? round(($present / $total) * 100) : 0;
-            $progress = ProgressTracking::whereDate('completion_date', $date)->sum('pages_count') ?? 0;
+            $progress = ProgressTracking::whereDate('date', $date)->sum('pages_count') ?? 0;
             
             $data[] = [
                 'name' => $days[$date->dayOfWeek],
