@@ -70,10 +70,10 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
         <div className="flex items-center justify-center lg:w-1/3">
           <div className="flex flex-col items-center">
             <h1 className="text-lg font-black text-slate-800 dark:text-white tracking-tight leading-none">
-              مجمع بن خميس التعليمي
+              {user?.school_name || 'حلقات برو'}
             </h1>
             <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest mt-1">
-              نظام إدارة الحلقات
+              {user?.school_name ? 'نظام حلقات برو التعليمي' : 'منصة إدارة الحلقات القرآنية'}
             </span>
           </div>
         </div>
@@ -87,10 +87,10 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
             >
               <div className="hidden text-right md:block">
                 <p className="text-xs font-black text-slate-800 dark:text-white leading-tight">
-                  {user?.name || 'مستخدم'}
+                  {user?.name?.split('(')[0].trim() || 'مستخدم'}
                 </p>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                  {role === 'admin' ? 'مدير النظام' : role}
+                  {role === 'owner' ? 'رئيس المنصة' : (role === 'supervisor' ? 'مدير المجمع' : (role === 'admin' ? 'مدير الشؤون الإدارية' : (role === 'manager' ? 'مشرف تعليمي' : (role === 'teacher' ? 'معلم حلقة' : role))))}
                 </p>
               </div>
               
@@ -110,10 +110,14 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
                   className="fixed inset-0 z-10" 
                   onClick={() => setDropdownOpen(false)}
                 ></div>
-                <div className="absolute left-0 mt-3 w-64 origin-top-left glass-card-premium p-2 z-20 animate-in slide-in-from-top-2 duration-300 shadow-2xl">
+                <div className="absolute left-0 mt-3 w-64 origin-top-left glass-card-premium p-2 z-20 shadow-2xl">
                   <div className="px-4 py-3 mb-2 border-b border-slate-100 dark:border-white/5">
-                    <p className="text-xs font-black text-slate-800 dark:text-white">{user?.name}</p>
-                    <p className="text-[10px] font-bold text-slate-400">{role}</p>
+                    <p className="text-xs font-black text-slate-800 dark:text-white">
+                      {user?.name?.split('(')[0].trim()}
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-400">
+                      {role === 'owner' ? 'رئيس المنصة' : (role === 'supervisor' ? 'مدير المجمع' : (role === 'admin' ? 'مدير الشؤون الإدارية' : (role === 'manager' ? 'مشرف تعليمي' : (role === 'teacher' ? 'معلم حلقة' : role))))}
+                    </p>
                   </div>
 
                   <div className="space-y-1">
@@ -136,7 +140,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-primary/5 hover:text-primary transition-all"
                     >
                       <SettingsIcon size={16} />
-                      {role === 'admin' ? 'إعدادات النظام' : 'إعدادات الحساب'}
+                      {role === 'admin' || role === 'supervisor' || role === 'owner' ? 'إعدادات النظام' : 'إعدادات الحساب'}
                     </Link>
 
                     <div className="my-1 border-t border-slate-100 dark:border-white/5"></div>

@@ -19,7 +19,6 @@ return new class extends Migration
             $table->text('teacher_note')->nullable();
             $table->uuid('recorded_by');
             $table->timestamps();
-
             $table->foreign('enrollment_id')->references('id')->on('enrollments');
             $table->foreign('recorded_by')->references('id')->on('users');
             

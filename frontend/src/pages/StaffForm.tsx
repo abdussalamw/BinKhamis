@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
-  ChevronLeft, Save, ShieldCheck, User, 
+  ChevronLeft, Save, Shield, User, 
   Mail, CreditCard, Briefcase,
   Key, AlertCircle, Power
 } from 'lucide-react';
@@ -15,6 +15,10 @@ const StaffForm: React.FC = () => {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const viewerRole = user?.role || 'teacher';
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -26,7 +30,7 @@ const StaffForm: React.FC = () => {
     qualification: '',
     password: '',
     allowed_circles: [] as string[],
-    circle_id: '', // For teachers
+    circle_id: '', 
   });
 
   const [allCircles, setAllCircles] = useState<any[]>([]);
@@ -34,6 +38,11 @@ const StaffForm: React.FC = () => {
   useEffect(() => {
     fetchCircles();
     if (isEdit) fetchStaffData();
+    else {
+      // Set default role based on hierarchy
+      if (viewerRole === 'admin') setFormData(prev => ({...prev, role: 'teacher'}));
+      else if (viewerRole === 'supervisor') setFormData(prev => ({...prev, role: 'admin'}));
+    }
   }, [id]);
 
   const fetchCircles = async () => {
@@ -47,7 +56,7 @@ const StaffForm: React.FC = () => {
     try {
       const response = await api.get(`/staff/${id}`);
       const data = response.data;
-      const profile = data.profile || {};
+      const profile = data.teacher_profile || data.active_profile || data.profile || {};
       
       setFormData({
         name: data.name || '',
@@ -89,13 +98,35 @@ const StaffForm: React.FC = () => {
 
   if (loading) return <div className="py-20 text-center font-black">جاري تحميل بيانات العضو...</div>;
 
+  // Determine allowed roles to assign
+  const getAllowedRoles = () => {
+    if (viewerRole === 'owner') return [
+      { id: 'supervisor', label: 'مدير المجمع' },
+      { id: 'admin', label: 'مدير الشؤون الإدارية' },
+      { id: 'manager', label: 'مشرف تعليمي' },
+      { id: 'teacher', label: 'معلم حلقة' }
+    ];
+    if (viewerRole === 'supervisor') return [
+      { id: 'admin', label: 'مدير الشؤون الإدارية' },
+      { id: 'manager', label: 'مشرف تعليمي' },
+      { id: 'teacher', label: 'معلم حلقة' }
+    ];
+    if (viewerRole === 'admin') return [
+      { id: 'manager', label: 'مشرف تعليمي' },
+      { id: 'teacher', label: 'معلم حلقة' }
+    ];
+    return [{ id: 'teacher', label: 'معلم حلقة' }];
+  };
+
+  const allowedRoles = getAllowedRoles();
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-4">
           <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
-            <ShieldCheck size={24} />
+            <Shield size={24} />
           </div>
           <div>
             <h1 className="text-xl font-black text-slate-800 dark:text-white">
@@ -163,9 +194,9 @@ const StaffForm: React.FC = () => {
                 value={formData.role}
                 onChange={e => setFormData({...formData, role: e.target.value as any})}
               >
-                <option value="teacher">معلم</option>
-                <option value="admin">إداري</option>
-                <option value="supervisor">مشرف</option>
+                {allowedRoles.map(role => (
+                  <option key={role.id} value={role.id}>{role.label}</option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">
@@ -193,7 +224,7 @@ const StaffForm: React.FC = () => {
             </div>
           )}
 
-          {formData.role === 'supervisor' && (
+          {(formData.role === 'supervisor' || formData.role === 'manager') && (
             <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2 text-indigo-600">الحلقات المسموح بمتابعتها</label>
                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800">

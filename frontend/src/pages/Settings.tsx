@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Settings as SettingsIcon, Shield, Database, Save, Smartphone, RefreshCw, Power, QrCode, AlertCircle, CheckCircle2, Trash2, History, Loader2, X, Upload, Key, Download, BellRing, FileText, AlertTriangle, CheckCircle, Sparkles, Zap, Lock
+  Settings as SettingsIcon, Shield, Database, Save, Smartphone, RefreshCw, Power, QrCode, AlertCircle, Check as CheckCircle2, Trash, History, Loader, X, Upload, Key, Download, Bell, FileText, AlertTriangle, CheckCircle, Sparkles, Zap, Lock
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -151,12 +151,12 @@ const Settings: React.FC = () => {
   const role = user?.role || 'student';
 
   const allTabs = [
-    { id: 'general', title: 'عام', icon: SettingsIcon, roles: ['admin'] },
-    { id: 'whatsapp', title: 'الواتساب', icon: Smartphone, roles: ['admin'] },
-    { id: 'import', title: 'استيراد البيانات', icon: Upload, roles: ['admin'] },
-    { id: 'notifications', title: 'التنبيهات', icon: BellRing, roles: ['admin', 'supervisor'] },
-    { id: 'security', title: 'الأمان', icon: Shield, roles: ['admin', 'supervisor', 'teacher', 'student'] },
-    { id: 'backup', title: 'النسخ الاحتياطي', icon: Database, roles: ['admin'] },
+    { id: 'general', title: 'عام', icon: SettingsIcon, roles: ['owner', 'supervisor', 'admin'] },
+    { id: 'whatsapp', title: 'الواتساب', icon: Smartphone, roles: ['owner', 'supervisor', 'admin'] },
+    { id: 'import', title: 'استيراد البيانات', icon: Upload, roles: ['owner', 'supervisor', 'admin'] },
+    { id: 'notifications', title: 'التنبيهات', icon: Bell, roles: ['owner', 'supervisor', 'admin'] },
+    {id: 'security', title: 'الأمان', icon: Shield, roles: ['owner', 'supervisor', 'admin', 'manager', 'teacher', 'student']},
+    { id: 'backup', title: 'النسخ الاحتياطي', icon: Database, roles: ['owner', 'supervisor', 'admin'] },
   ];
 
   const tabs = allTabs.filter(tab => tab.roles.includes(role));
@@ -251,7 +251,7 @@ const Settings: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-[32px] p-6 shadow-sm border border-slate-100 dark:border-slate-800 min-h-[500px] relative">
             {loading && (
               <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-[32px]">
-                <Loader2 size={32} className="text-primary animate-spin" />
+                <Loader size={32} className="text-primary animate-spin" />
               </div>
             )}
 
@@ -402,7 +402,7 @@ const Settings: React.FC = () => {
                             <span className="text-[9px] font-black uppercase">إعادة تشغيل</span>
                           </button>
                           <button onClick={handleLogout} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-rose-50 text-rose-600 transition-all hover:bg-rose-100">
-                            <Trash2 size={16} />
+                            <Trash size={16} />
                             <span className="text-[9px] font-black uppercase">قطع الربط</span>
                           </button>
                         </div>
@@ -466,7 +466,7 @@ const Settings: React.FC = () => {
             {activeTab === 'notifications' && (
               <div className="space-y-6 animate-in slide-in-from-left duration-400">
                 <div className="flex items-center gap-2 border-b border-slate-50 dark:border-slate-800 pb-4">
-                  <BellRing size={18} className="text-primary" />
+                  <Bell size={18} className="text-primary" />
                   <h3 className="font-black text-sm text-slate-800 dark:text-white uppercase tracking-wider">إعدادات التنبيهات</h3>
                 </div>
                 
@@ -653,7 +653,7 @@ const Settings: React.FC = () => {
                       disabled={!importFile || importStatus === 'loading'}
                       className="w-full py-4 rounded-[2rem] bg-primary text-white text-xs font-black shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-all hover:translate-y-[-2px] active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {importStatus === 'loading' ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} />}
+                      {importStatus === 'loading' ? <Loader size={18} className="animate-spin" /> : <RefreshCw size={18} />}
                       <span>بدء عملية الاستيراد</span>
                     </button>
                   </div>
@@ -671,7 +671,7 @@ const Settings: React.FC = () => {
 
                     {importStatus === 'loading' && (
                       <div className="text-center space-y-4">
-                        <Loader2 size={48} className="text-primary animate-spin mx-auto" />
+                        <Loader size={48} className="text-primary animate-spin mx-auto" />
                         <h4 className="text-sm font-black text-slate-800 dark:text-white">جاري المعالجة...</h4>
                         <p className="text-[10px] font-bold text-slate-400 max-w-[200px]">يرجى الانتظار، جاري تحليل البيانات وتحديث السجلات في قاعدة البيانات.</p>
                       </div>
@@ -706,7 +706,7 @@ const Settings: React.FC = () => {
                     {importStatus === 'error' && (
                       <div className="text-center space-y-4">
                         <div className="h-16 w-16 rounded-2xl bg-danger/10 text-danger flex items-center justify-center mx-auto">
-                          <AlertTriangle size={32} />
+                          <AlertCircle size={32} />
                         </div>
                         <h4 className="text-sm font-black text-slate-800 dark:text-white">فشلت عملية الاستيراد</h4>
                         <div className="p-3 rounded-xl bg-danger/5 border border-danger/10">

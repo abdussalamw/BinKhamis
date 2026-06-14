@@ -4,21 +4,22 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Profile;
+use App\Models\StudentProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class StudentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = min((int) $request->input('per_page', 50), 100);
         $students = User::where('role', 'student')
-            ->with('profile')
+            ->with('studentProfile')
             ->withCount(['enrollments' => function($query) {
                 $query->where('status', 'active');
             }])
             ->latest()
-            ->get();
+            ->paginate($perPage);
             
         return response()->json($students);
     }
@@ -27,7 +28,7 @@ class StudentController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string',
+            'phone' => 'required|string|unique:users,phone',
             'email' => 'nullable|email',
             'identity_number' => 'nullable|string',
             'academic_stage' => 'nullable|string',
@@ -48,25 +49,24 @@ class StudentController extends Controller
                 'is_active' => true,
             ]);
 
-            $user->profile()->create([
-                'type' => 'student',
+            $user->studentProfile()->create([
                 'identity_number' => $validated['identity_number'],
                 'academic_stage' => $validated['academic_stage'],
                 'grade_level' => $validated['grade_level'],
                 'school_name' => $validated['school_name'],
                 'neighborhood' => $validated['neighborhood'],
                 'birth_date' => $validated['birth_date'],
-                'memorization_amount' => $validated['memorization_amount'],
+                'current_level' => $validated['memorization_amount'],
             ]);
 
-            return response()->json($user->load('profile'), 201);
+            return response()->json($user->load('studentProfile'), 201);
         });
     }
 
     public function show($id)
     {
         $student = User::where('role', 'student')
-            ->with(['profile', 'enrollments' => function($query) {
+            ->with(['studentProfile', 'enrollments' => function($query) {
                 $query->where('status', 'active')->with('circle');
             }])
             ->findOrFail($id);
@@ -100,24 +100,38 @@ class StudentController extends Controller
                 'school_name', 'neighborhood', 'birth_date', 'memorization_amount'
             ]));
             
-            if ($user->profile) {
-                $user->profile->update($profileData);
+            if ($user->studentProfile) {
+                $user->studentProfile->update($profileData);
             } else {
-                $user->profile()->create(array_merge($profileData, ['type' => 'student']));
+                $user->studentProfile()->create($profileData);
             }
         });
 
-        return response()->json($user->load('profile'));
+        return response()->json($user->load('studentProfile'));
     }
 
     public function destroy($id)
     {
         $user = User::where('role', 'student')->findOrFail($id);
         
-        // Delete profile and user
-        $user->profile()->delete();
-        $user->delete();
+        // D6: Clean up all related records before deleting
+        DB::transaction(function () use ($user) {
+            $enrollmentIds = \App\Models\Enrollment::where('student_id', $user->id)->pluck('id');
+            
+            // Delete attendance records for this student's enrollments
+            \App\Models\Attendance::whereIn('enrollment_id', $enrollmentIds)->delete();
+            
+            // Delete enrollments
+            \App\Models\Enrollment::where('student_id', $user->id)->delete();
+            
+            // Delete progress tracking
+            \App\Models\ProgressTracking::where('student_id', $user->id)->delete();
+            
+            // Delete profile and user
+            $user->studentProfile()->delete();
+            $user->delete();
+        });
 
-        return response()->json(['message' => 'تم حذف الطالب بنجاح']);
+        return response()->json(['message' => 'تم حذف الطالب وجميع بياناته المرتبطة بنجاح']);
     }
 }

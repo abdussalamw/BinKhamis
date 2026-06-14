@@ -13,10 +13,12 @@ use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Support\Str;
 
+use App\Traits\BelongsToSchool;
+
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasUuids, SoftDeletes, HasRoles;
+    use HasFactory, Notifiable, HasUuids, SoftDeletes, HasRoles, BelongsToSchool;
 
     /**
      * The attributes that are mass assignable.
@@ -33,7 +35,12 @@ class User extends Authenticatable
         'is_active',
         'last_login_at',
         'api_token',
+        'token_expires_at',
+        'token_version',
+        'school_id',
     ];
+
+    protected $appends = ['active_profile'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -58,6 +65,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'token_expires_at' => 'datetime',
         ];
     }
 
@@ -78,6 +86,30 @@ class User extends Authenticatable
     public function profile(): HasOne
     {
         return $this->hasOne(Profile::class);
+    }
+
+    public function studentProfile(): HasOne
+    {
+        return $this->hasOne(StudentProfile::class);
+    }
+
+    public function teacherProfile(): HasOne
+    {
+        return $this->hasOne(TeacherProfile::class);
+    }
+
+    /**
+     * Helper to get the correct profile based on role
+     */
+    public function getActiveProfileAttribute()
+    {
+        if ($this->role === 'student') {
+            return $this->studentProfile;
+        }
+        if (in_array($this->role, ['teacher', 'admin', 'supervisor'])) {
+            return $this->teacherProfile;
+        }
+        return $this->profile;
     }
 
     public function circles(): HasMany

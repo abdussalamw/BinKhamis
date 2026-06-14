@@ -2,42 +2,37 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BelongsToSchool;
 
 class ProgressTracking extends Model
 {
-    use HasUuids;
+    use HasFactory, BelongsToSchool;
 
     protected $table = 'progress_tracking';
 
     protected $fillable = [
         'student_id',
-        'surah_name',
-        'surah_number',
-        'start_verse',
-        'end_verse',
+        'circle_id',
         'date',
-        'quality_rating',
-        'teacher_id',
-        'notes',
-        'audio_recording_url',
+        'type',
+        'surah',
+        'from_verse',
+        'to_verse',
+        'pages_count',
+        'grade',
+        'note',
+        'school_id',
     ];
 
-    protected $casts = [
-        'date' => 'date',
-        'quality_rating' => 'integer',
-    ];
-
-    public function student(): BelongsTo
+    public function student()
     {
         return $this->belongsTo(User::class, 'student_id');
     }
 
-    public function teacher(): BelongsTo
+    public function circle()
     {
-        return $this->belongsTo(User::class, 'teacher_id');
+        return $this->belongsTo(Circle::class);
     }
 }

@@ -31,4 +31,11 @@ return [
         ],
     ],
 
+    // D3: WhatsApp Evolution API configuration (accessible via config('services.whatsapp.*'))
+    'whatsapp' => [
+        'url' => env('WA_EVO_URL', 'http://localhost:8080'),
+        'api_key' => env('WA_EVO_API_KEY', ''),
+        'instance' => env('WA_EVO_INSTANCE', 'MainInstance'),
+    ],
+
 ];

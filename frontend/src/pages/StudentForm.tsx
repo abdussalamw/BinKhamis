@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
-  ChevronLeft, Save, User, 
-  ShieldCheck, GraduationCap, School, Book
+  ChevronLeft, Search, 
+  User, 
+  Phone, 
+  MapPin, 
+  Shield, GraduationCap, School, Book
 } from 'lucide-react';
 
 const StudentForm: React.FC = () => {
@@ -36,7 +39,7 @@ const StudentForm: React.FC = () => {
     try {
       const response = await api.get(`/students/${id}`);
       const data = response.data;
-      const profile = data.profile || {};
+      const profile = data.student_profile || data.active_profile || data.profile || {};
       
       setFormData({
         name: data.name || '',
@@ -102,7 +105,7 @@ const StudentForm: React.FC = () => {
         {/* Personal Info */}
         <div className="glass-card p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-white/10">
           <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-            <ShieldCheck size={20} className="text-indigo-500" />
+            <Shield size={20} className="text-indigo-500" />
             المعلومات الشخصية
           </h3>
           
@@ -228,7 +231,7 @@ const StudentForm: React.FC = () => {
                   onClick={() => setFormData({...formData, is_active: !formData.is_active})}
                   className={`h-12 w-12 rounded-2xl flex items-center justify-center transition-all ${formData.is_active ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'bg-slate-200 text-slate-400'}`}
                 >
-                  <ShieldCheck size={24} />
+                  <Shield size={24} />
                 </button>
                 <div>
                   <p className="text-sm font-black text-slate-800 dark:text-white">حالة الحساب</p>

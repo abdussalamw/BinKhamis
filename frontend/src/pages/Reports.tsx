@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, 
-  Cell, ComposedChart, Area
+  Cell, ComposedChart, Area, BarChart
 } from 'recharts';
 import { 
   Calendar, Users, 
@@ -162,51 +162,127 @@ const Reports: React.FC = () => {
           </div>
         </div>
       )}
-3      {/* COMPLEX TAB */}
-      {activeTab === 'complex' && (
+3      {activeTab === 'complex' && (
         <div className="space-y-6 md:space-y-8">
+          {/* Term Info Banner */}
+          <div className="bg-indigo-600 rounded-3xl p-6 text-white relative overflow-hidden shadow-xl shadow-indigo-200">
+             <div className="relative z-10">
+                <div className="flex items-center gap-2 text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-1">
+                   <Calendar size={12} /> الفصل الدراسي الحالي
+                </div>
+                <h2 className="text-2xl font-black">{reportData.term?.name || 'الفصل الدراسي الثاني 1447'}</h2>
+                <div className="mt-4 flex flex-wrap gap-4">
+                   <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10">
+                      <p className="text-[9px] font-bold text-indigo-100 uppercase">بدأ في</p>
+                      <p className="text-xs font-black">{reportData.term?.start_date ? new Date(reportData.term.start_date).toLocaleDateString('ar-SA') : '-'}</p>
+                   </div>
+                   <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10">
+                      <p className="text-[9px] font-bold text-indigo-100 uppercase">ينتهي في</p>
+                      <p className="text-xs font-black">{reportData.term?.end_date ? new Date(reportData.term.end_date).toLocaleDateString('ar-SA') : '-'}</p>
+                   </div>
+                </div>
+             </div>
+             <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-            <KPICard title="إجمالي الطلاب" value={reportData.kpis?.total_students} icon={<Users size={16}/>} color="primary" />
-            <KPICard title="نسبة الانضباط" value={`${reportData.kpis?.attendance_rate}%`} icon={<Calendar size={16}/>} color="emerald" />
-            <KPICard title="متوسط الإنجاز" value={reportData.kpis?.avg_progress} icon={<Award size={16}/>} color="amber" />
-            <KPICard title="الحلقات" value={reportData.kpis?.active_circles} icon={<Map size={16}/>} color="indigo" />
+            <KPICard title="نسبة الحضور" value={`${reportData.kpis?.attendance_rate}%`} icon={<Calendar size={16}/>} color="primary" />
+            <KPICard title="نسبة التأخر" value={`${reportData.kpis?.late_rate}%`} icon={<Calendar size={16}/>} color="amber" />
+            <KPICard title="إجمالي الطلاب" value={reportData.kpis?.total_students} icon={<Users size={16}/>} color="indigo" />
+            <KPICard title="متوسط الإنجاز" value={reportData.kpis?.avg_progress} icon={<Award size={16}/>} color="emerald" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
              <div className="lg:col-span-8 glass-card-premium p-6">
-                <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">نبض الأداء الشهري للمجمع</h3>
+                <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">توزيع الحضور الشهري (مفصل)</h3>
                 <div className="h-[300px]">
                    <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={reportData.monthlyProgress}>
+                      <BarChart data={reportData.monthlyProgress}>
                         <CartesianGrid stroke="#f8fafc" vertical={false} />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
                         <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 10}} />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="students" fill="#6366f1" stroke="#6366f1" fillOpacity={0.05} />
-                        <Bar dataKey="achievements" barSize={15} fill="#10b981" radius={[4, 4, 0, 0]} />
-                        <Line type="monotone" dataKey="attendance" stroke="#f59e0b" strokeWidth={3} />
-                      </ComposedChart>
+                        <Tooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+                        <Bar dataKey="present" stackId="a" fill="#10b981" name="حضور" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="late" stackId="a" fill="#f59e0b" name="تأخر" />
+                        <Bar dataKey="excused" stackId="a" fill="#6366f1" name="استئذان" />
+                        <Bar dataKey="absent" stackId="a" fill="#ef4444" name="غياب" radius={[4, 4, 0, 0]} />
+                      </BarChart>
                    </ResponsiveContainer>
                 </div>
              </div>
-             <div className="lg:col-span-4 glass-card-premium p-6">
-                <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">توزيع المسارات</h3>
-                <div className="h-[200px]">
-                   <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                         <Pie data={reportData.programDistribution} innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
-                            {reportData.programDistribution?.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                         </Pie>
-                         <Tooltip />
-                      </PieChart>
-                   </ResponsiveContainer>
+             
+             <div className="lg:col-span-4 space-y-6">
+                <div className="glass-card-premium p-6">
+                  <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">إحصائيات الحضور الرقمية</h3>
+                  <div className="space-y-4">
+                     {[
+                        { label: 'حاضر', value: reportData.kpis?.counts?.present, color: 'bg-emerald-500' },
+                        { label: 'متأخر', value: reportData.kpis?.counts?.late, color: 'bg-amber-500' },
+                        { label: 'مستأذن', value: reportData.kpis?.counts?.excused, color: 'bg-indigo-500' },
+                        { label: 'غائب', value: reportData.kpis?.counts?.absent, color: 'bg-rose-500' },
+                     ].map((item, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                           <div className="flex items-center gap-2">
+                              <div className={`h-2 w-2 rounded-full ${item.color}`}></div>
+                              <span className="text-[11px] font-bold text-slate-600">{item.label}</span>
+                           </div>
+                           <span className="text-xs font-black text-slate-800">{item.value}</span>
+                        </div>
+                     ))}
+                  </div>
                 </div>
-                <div className="mt-4 space-y-2">
-                   {reportData.programDistribution?.map((p: any, i: number) => (
-                     <div key={i} className="flex items-center justify-between text-[11px] font-bold">
-                        <span className="text-slate-600">{p.name || 'عام'}</span>
-                        <span className="text-primary">{p.value}</span>
-                     </div>
+
+                <div className="glass-card-premium p-6">
+                  <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">توزيع المسارات</h3>
+                  <div className="h-[150px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={reportData.programDistribution} innerRadius={40} outerRadius={60} paddingAngle={5} dataKey="value">
+                              {reportData.programDistribution?.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+             </div>
+          </div>
+
+          {/* Top Students Section */}
+          <div className="glass-card-premium p-6">
+             <div className="flex items-center justify-between mb-8">
+                <div>
+                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">أكثر الطلاب انضباطاً</h3>
+                   <p className="text-lg font-black text-slate-800 mt-1">لوحة الشرف لهذا الفصل</p>
+                </div>
+                <Award className="text-amber-500" size={24} />
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {reportData.topStudents?.map((student: any, i: number) => (
+                   <div key={i} className="bg-slate-50 dark:bg-white/5 rounded-3xl p-5 border border-slate-100 dark:border-white/5 text-center group hover:border-primary/30 transition-all">
+                      <div className="h-12 w-12 bg-white dark:bg-slate-800 rounded-2xl mx-auto mb-3 flex items-center justify-center text-primary font-black shadow-sm group-hover:scale-110 transition-transform">
+                         {i + 1}
+                      </div>
+                      <p className="text-[11px] font-black text-slate-800 dark:text-white line-clamp-1 mb-1">{student.name}</p>
+                      <p className="text-[9px] font-bold text-slate-400 mb-3">{student.level}</p>
+                      <div className="bg-emerald-50 text-emerald-600 rounded-lg py-1 px-2 text-[10px] font-black inline-block">
+                         {student.rate}% انضباط
+                      </div>
+                   </div>
+                ))}
+             </div>
+          </div>
+
+          {/* Insights */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="glass-card-premium p-6 border-r-4 border-r-primary">
+                <h4 className="text-[10px] font-black text-primary uppercase tracking-widest mb-4">رؤى وتوصيات</h4>
+                <div className="space-y-3">
+                   {reportData.insights?.map((insight: string, i: number) => (
+                      <div key={i} className="flex gap-3">
+                         <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary shrink-0"></div>
+                         <p className="text-[11px] font-bold text-slate-600 dark:text-slate-300 leading-relaxed">{insight}</p>
+                      </div>
                    ))}
                 </div>
              </div>
@@ -258,31 +334,42 @@ const Reports: React.FC = () => {
                      </div>
                      <div>
                         <h2 className="text-lg font-black text-slate-800 dark:text-white">{selectedCircle.circle?.name}</h2>
-                        <p className="text-xs font-bold text-slate-400">بإشراف: {selectedCircle.circle?.teacher?.name}</p>
+                        <p className="text-xs font-bold text-slate-400">معلم الحلقة: {selectedCircle.circle?.teacher?.name}</p>
                      </div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                     <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-center">
-                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">الطلاب</p>
-                        <p className="text-xl font-black text-slate-800 dark:text-white">{selectedCircle.stats?.total_students}</p>
-                     </div>
-                     <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-center">
-                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">نسبة الحضور</p>
-                        <p className="text-xl font-black text-emerald-500">{selectedCircle.stats?.attendance_rate}%</p>
-                     </div>
-                  </div>
-                  
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">آخر عمليات التحضير</h3>
-                  <div className="space-y-2">
-                     {selectedCircle.recent_attendance?.map((a: any, i: number) => (
-                       <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-white/5">
-                          <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{a.date}</span>
-                          <span className={`px-3 py-1 rounded-lg text-[9px] font-black ${a.status === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                             {a.status === 'present' ? 'حاضر' : 'غائب'}
-                          </span>
-                       </div>
-                     ))}
-                  </div>
+                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                      <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl text-center border border-slate-100 dark:border-white/5">
+                         <p className="text-[9px] font-black text-slate-400 uppercase mb-1">الطلاب</p>
+                         <p className="text-xl font-black text-slate-800 dark:text-white">{selectedCircle.stats?.total_students}</p>
+                      </div>
+                      <div className="p-4 bg-emerald-50/50 dark:bg-emerald-500/5 rounded-2xl text-center border border-emerald-100/50">
+                         <p className="text-[9px] font-black text-emerald-600 uppercase mb-1">نسبة الحضور</p>
+                         <p className="text-xl font-black text-emerald-600">{selectedCircle.stats?.attendance_rate}%</p>
+                      </div>
+                      <div className="p-4 bg-amber-50/50 dark:bg-amber-500/5 rounded-2xl text-center border border-amber-100/50">
+                         <p className="text-[9px] font-black text-amber-600 uppercase mb-1">نسبة التأخر</p>
+                         <p className="text-xl font-black text-amber-600">{selectedCircle.stats?.late_rate}%</p>
+                      </div>
+                      <div className="p-4 bg-indigo-50/50 dark:bg-indigo-500/5 rounded-2xl text-center border border-indigo-100/50">
+                         <p className="text-[9px] font-black text-indigo-600 uppercase mb-1">الإجمالي (حالات)</p>
+                         <p className="text-xl font-black text-indigo-600">{selectedCircle.stats?.counts?.present + selectedCircle.stats?.counts?.late + selectedCircle.stats?.counts?.absent + selectedCircle.stats?.counts?.excused}</p>
+                      </div>
+                   </div>
+                   
+                   <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">تفاصيل السجلات الأخيرة</h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {selectedCircle.recent_attendance?.map((a: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-white/5">
+                           <div className="flex flex-col">
+                              <span className="text-[10px] font-black text-slate-700 dark:text-slate-200">{a.student?.name || 'طالب'}</span>
+                              <span className="text-[8px] font-bold text-slate-400">{a.date}</span>
+                           </div>
+                           <span className={`px-3 py-1 rounded-lg text-[9px] font-black ${a.status === 'present' ? 'bg-emerald-100 text-emerald-700' : a.status === 'late' ? 'bg-amber-100 text-amber-700' : a.status === 'excused' ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'}`}>
+                              {a.status === 'present' ? 'حاضر' : a.status === 'late' ? 'متأخر' : a.status === 'excused' ? 'مستأذن' : 'غائب'}
+                           </span>
+                        </div>
+                      ))}
+                   </div>
                </div>
             </div>
           ) : (
@@ -342,30 +429,38 @@ const Reports: React.FC = () => {
                       <h2 className="text-lg font-black text-slate-800 dark:text-white">{selectedStudent.student?.name}</h2>
                       <p className="text-[10px] font-black text-primary mt-1 uppercase tracking-widest">{selectedStudent.student?.profile?.current_level}</p>
                       
-                      <div className="mt-8 grid grid-cols-2 gap-4">
-                         <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl">
-                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1">الحضور</p>
-                            <p className="text-lg font-black text-emerald-500">{selectedStudent.summary?.attendance_rate}%</p>
-                         </div>
-                         <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl">
-                            <p className="text-[9px] font-black text-slate-400 uppercase mb-1">الإنجاز</p>
-                            <p className="text-lg font-black text-indigo-600">{selectedStudent.summary?.total_achievements}</p>
-                         </div>
-                      </div>
-                   </div>
-                   <div className="lg:col-span-8 glass-card-premium p-6">
-                      <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">السجل الأخير</h3>
-                      <div className="space-y-3">
-                         {selectedStudent.attendance?.map((a: any, i: number) => (
-                           <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/10">
-                              <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{a.date}</span>
-                              <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${a.status === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                                 {a.status === 'present' ? 'حاضر' : 'غائب'}
-                              </span>
-                           </div>
-                         ))}
-                      </div>
-                   </div>
+                       <div className="mt-8 grid grid-cols-2 gap-4">
+                          <div className="p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100/50">
+                             <p className="text-[9px] font-black text-emerald-600 uppercase mb-1">الحضور</p>
+                             <p className="text-lg font-black text-emerald-600">{selectedStudent.summary?.attendance_rate}%</p>
+                          </div>
+                          <div className="p-4 bg-amber-50 dark:bg-amber-500/5 rounded-2xl border border-amber-100/50">
+                             <p className="text-[9px] font-black text-amber-600 uppercase mb-1">التأخر</p>
+                             <p className="text-lg font-black text-amber-600">{selectedStudent.summary?.late_rate}%</p>
+                          </div>
+                          <div className="p-4 bg-indigo-50 dark:bg-indigo-500/5 rounded-2xl border border-indigo-100/50">
+                             <p className="text-[9px] font-black text-indigo-600 uppercase mb-1">الإنجاز</p>
+                             <p className="text-lg font-black text-indigo-600">{selectedStudent.summary?.total_achievements}</p>
+                          </div>
+                          <div className="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/5">
+                             <p className="text-[9px] font-black text-slate-400 uppercase mb-1">السجلات</p>
+                             <p className="text-lg font-black text-slate-700 dark:text-slate-200">{selectedStudent.summary?.counts?.present + selectedStudent.summary?.counts?.late + selectedStudent.summary?.counts?.absent + selectedStudent.summary?.counts?.excused}</p>
+                          </div>
+                       </div>
+                    </div>
+                    <div className="lg:col-span-8 glass-card-premium p-6">
+                       <h3 className="text-[10px] font-black text-slate-400 mb-6 uppercase tracking-widest">السجل الأخير</h3>
+                       <div className="space-y-3">
+                          {selectedStudent.attendance?.map((a: any, i: number) => (
+                            <div key={i} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-100 dark:border-white/10">
+                               <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{a.date}</span>
+                               <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${a.status === 'present' ? 'bg-emerald-100 text-emerald-700' : a.status === 'late' ? 'bg-amber-100 text-amber-700' : a.status === 'excused' ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'}`}>
+                                  {a.status === 'present' ? 'حاضر' : a.status === 'late' ? 'متأخر' : a.status === 'excused' ? 'مستأذن' : 'غائب'}
+                               </span>
+                            </div>
+                          ))}
+                       </div>
+                    </div>
                 </div>
              </div>
            ) : (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../services/api';
 import type { Student } from '../schema';
-import { Book, Clock, Plus, Search, ChevronDown, CheckCircle2 } from 'lucide-react';
+import { Book, Clock, Plus, Search, ChevronDown, Check as CheckCircle2 } from 'lucide-react';
 
 interface ProgressRecord {
   id: string;
@@ -9,7 +9,7 @@ interface ProgressRecord {
   surah_number: number;
   start_verse: number;
   end_verse: number;
-  completion_date: string;
+  date: string;
   quality_rating: 'ممتاز' | 'جيد' | 'يحتاج_مراجعة';
   notes: string;
 }
@@ -165,7 +165,7 @@ const ProgressTracking: React.FC = () => {
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-bold text-slate-500">ملاحظات المعلم</label>
+              <label className="mb-2 block text-sm font-bold text-slate-500">ملاحظات معلم الحلقة</label>
               <input
                 type="text"
                 className="w-full rounded-2xl bg-slate-50 border-none py-4 px-6 font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
@@ -220,7 +220,7 @@ const ProgressTracking: React.FC = () => {
                     <td className="py-5 px-8">
                       <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
                         <Clock size={14} />
-                        {new Date(record.completion_date).toLocaleDateString('ar-SA')}
+                        {new Date(record.date).toLocaleDateString('ar-SA')}
                       </div>
                     </td>
                     <td className="py-5 px-8">

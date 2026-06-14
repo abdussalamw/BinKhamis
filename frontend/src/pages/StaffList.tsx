@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../services/api';
 import { 
-  Search, Filter, Eye, Edit3, 
-  UserPlus, FileDown, ShieldCheck,
+  Search, Filter, Eye, Edit, 
+  UserPlus, FileDown, Shield,
   Phone, CreditCard, Mail, 
-  Power, PowerOff, CheckCircle2, XCircle
+  Power, Check as CheckCircle2, AlertCircle as XCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,7 +13,7 @@ interface StaffData {
   name: string;
   phone: string;
   email: string;
-  role: 'admin' | 'teacher' | 'supervisor';
+  role: 'admin' | 'teacher' | 'manager' | 'supervisor';
   is_active: boolean;
   profile?: {
     bank_account_number: string | null;
@@ -29,6 +29,10 @@ const StaffList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
 
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const viewerRole = user?.role || 'teacher';
+
   useEffect(() => {
     fetchStaff();
   }, []);
@@ -37,7 +41,27 @@ const StaffList: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get('/staff');
-      setStaff(response.data);
+      let data = response.data;
+      
+      // Role-based filtering logic
+      if (viewerRole === 'owner') {
+        // Owner only manages General Supervisors
+        data = data.filter((s: StaffData) => s.role === 'supervisor');
+      } else if (viewerRole === 'supervisor') {
+        // General Supervisor can see admins, teachers, and managers
+        data = data.filter((s: StaffData) => s.role !== 'supervisor' || s.id === user.id);
+      } else if (viewerRole === 'admin') {
+        // System Manager can only see teachers and managers (circle supervisors)
+        data = data.filter((s: StaffData) => s.role === 'teacher' || s.role === 'manager');
+      }
+      
+      // Map staff members to ensure consistent profile object
+      const mappedData = data.map((s: any) => ({
+        ...s,
+        profile: s.teacher_profile || s.active_profile || s.profile || {}
+      }));
+      
+      setStaff(mappedData);
     } catch (error) {
       console.error('Error fetching staff:', error);
     } finally {
@@ -47,24 +71,20 @@ const StaffList: React.FC = () => {
 
   const toggleStatus = async (member: StaffData) => {
     try {
-      // Optimistic UI update
       const updatedStaff = staff.map(s => 
         s.id === member.id ? { ...s, is_active: !s.is_active } : s
       );
       setStaff(updatedStaff);
-
-      // Backend update
       await axios.patch(`/staff/${member.id}/toggle-status`);
     } catch (error) {
       console.error('Error toggling status:', error);
-      fetchStaff(); // Rollback on error
+      fetchStaff();
     }
   };
 
   const filteredStaff = (staff || []).filter(member => {
-    const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.phone.includes(searchTerm) ||
-                         member.profile?.bank_account_number?.includes(searchTerm);
+    const matchesSearch = (member.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (member.phone || '').includes(searchTerm);
     const matchesRole = !roleFilter || member.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -75,7 +95,7 @@ const StaffList: React.FC = () => {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-4">
           <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
-            <ShieldCheck size={28} />
+            <Shield size={28} />
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-800 dark:text-white">إدارة الكوادر البشرية</h1>
@@ -103,7 +123,7 @@ const StaffList: React.FC = () => {
         <div className="relative flex-grow max-w-xl">
           <input
             type="text"
-            placeholder="بحث بالاسم، الجوال، أو رقم الحساب البنكي..."
+            placeholder="بحث بالاسم أو الجوال..."
             className="w-full rounded-2xl border-none bg-white dark:bg-slate-900 py-4 pr-12 pl-6 font-bold text-slate-700 dark:text-slate-200 outline-none ring-1 ring-slate-200 dark:ring-slate-800 focus:ring-2 focus:ring-indigo-600/20 transition-all shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -119,9 +139,10 @@ const StaffList: React.FC = () => {
             onChange={(e) => setRoleFilter(e.target.value)}
           >
             <option value="">كل الفئات</option>
-            <option value="teacher">معلم</option>
-            <option value="admin">إداري</option>
-            <option value="supervisor">مشرف</option>
+            <option value="teacher">معلم حلقة</option>
+            <option value="admin">مدير الشؤون الإدارية</option>
+            <option value="manager">مشرف تعليمي</option>
+            {viewerRole === 'owner' && <option value="supervisor">مدير المجمع</option>}
           </select>
         </div>
       </div>
@@ -161,7 +182,7 @@ const StaffList: React.FC = () => {
                         <div>
                             <h5 className={`font-black text-base leading-tight ${member.is_active ? 'text-slate-800 dark:text-white' : 'text-slate-400'}`}>{member.name}</h5>
                             <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter">
-                                {member.role === 'teacher' ? 'معلم حلقة' : member.role === 'admin' ? 'إداري نظام' : 'مشرف حلقات'}
+                                {member.role === 'teacher' ? 'معلم حلقة' : member.role === 'admin' ? 'مدير الشؤون الإدارية' : member.role === 'supervisor' ? 'مدير المجمع' : 'مشرف تعليمي'}
                             </span>
                         </div>
                       </div>
@@ -208,14 +229,14 @@ const StaffList: React.FC = () => {
                           onClick={() => navigate(`/staff/${member.id}/edit`)}
                           className="p-3 rounded-xl bg-slate-50 text-slate-400 hover:bg-amber-500 hover:text-white transition-all dark:bg-slate-800"
                         >
-                            <Edit3 size={18} />
+                            <Edit size={18} />
                         </button>
                         <button 
                           onClick={() => toggleStatus(member)}
                           className={`p-3 rounded-xl bg-slate-50 transition-all dark:bg-slate-800 ${member.is_active ? 'text-rose-500 hover:bg-rose-500 hover:text-white' : 'text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
                           title={member.is_active ? 'تعطيل الحساب' : 'تنشيط الحساب'}
                         >
-                            {member.is_active ? <PowerOff size={18} /> : <Power size={18} />}
+                             {member.is_active ? <Power size={18} className="opacity-50" /> : <Power size={18} />}
                         </button>
                       </div>
                     </td>

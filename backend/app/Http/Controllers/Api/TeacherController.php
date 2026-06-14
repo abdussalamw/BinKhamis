@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Profile;
+use App\Models\TeacherProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +18,7 @@ class TeacherController extends Controller
     public function index()
     {
         $teachers = User::where('role', 'teacher')
-            ->with('profile')
+            ->with('teacherProfile')
             ->latest()
             ->get(); // Changed to get() to match frontend expectations
             
@@ -49,13 +49,12 @@ class TeacherController extends Controller
                     'is_active' => true,
                 ]);
 
-                $user->profile()->create([
-                    'type' => 'teacher',
+                $user->teacherProfile()->create([
                     'specialization' => $validated['specialization'] ?? null,
                     'national_id' => $validated['national_id'] ?? null,
                 ]);
 
-                return response()->json($user->load('profile'), 201);
+                return response()->json($user->load('teacherProfile'), 201);
             });
         } catch (\Exception $e) {
             return response()->json(['message' => 'فشل إضافة المعلم', 'error' => $e->getMessage()], 500);
@@ -68,7 +67,7 @@ class TeacherController extends Controller
     public function show(string $id)
     {
         $teacher = User::where('role', 'teacher')
-            ->with(['profile', 'circles'])
+            ->with(['teacherProfile', 'circles'])
             ->findOrFail($id);
             
         return response()->json($teacher);
@@ -93,10 +92,10 @@ class TeacherController extends Controller
                 $teacher->update(collect($validated)->only(['name', 'phone'])->toArray());
 
                 $profileFields = collect($validated)->except(['name', 'phone'])->toArray();
-                $teacher->profile()->update($profileFields);
+                $teacher->teacherProfile()->update($profileFields);
             });
 
-            return response()->json($teacher->load('profile'));
+            return response()->json($teacher->load('teacherProfile'));
         } catch (\Exception $e) {
             return response()->json(['message' => 'فشل تحديث بيانات المعلم', 'error' => $e->getMessage()], 500);
         }

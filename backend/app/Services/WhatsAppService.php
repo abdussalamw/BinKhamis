@@ -13,9 +13,10 @@ class WhatsAppService
 
     public function __construct()
     {
-        $this->baseUrl = env('WA_EVO_URL');
-        $this->apiKey = env('WA_EVO_API_KEY');
-        $this->instance = env('WA_EVO_INSTANCE');
+        // D3: Use config() with env() fallback for backward compatibility
+        $this->baseUrl = config('services.whatsapp.url', env('WA_EVO_URL', 'http://localhost:8080'));
+        $this->apiKey = config('services.whatsapp.api_key', env('WA_EVO_API_KEY', ''));
+        $this->instance = config('services.whatsapp.instance', env('WA_EVO_INSTANCE', 'MainInstance'));
     }
 
     /**
@@ -197,7 +198,7 @@ class WhatsAppService
     public function sendAttendanceNotification($studentName, $parentPhone, $status, $date)
     {
         $statusText = $status == 'absent' ? 'غائب' : ($status == 'late' ? 'متأخر' : 'حاضر');
-        $message = "نحيطكم علماً بأن الطالب: *{$studentName}* سجل حالة: *{$statusText}* في حلقة اليوم بتاريخ {$date}.\n\nإدارة حلقات بن خميس.";
+        $message = "نحيطكم علماً بأن الطالب: *{$studentName}* سجل حالة: *{$statusText}* في حلقة اليوم بتاريخ {$date}.\n\nإدارة حلقات برو.";
         
         return $this->sendMessage($parentPhone, $message);
     }

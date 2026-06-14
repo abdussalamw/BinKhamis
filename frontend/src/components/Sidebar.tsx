@@ -4,14 +4,15 @@ import {
   BookOpen, 
   Calendar, 
   TrendingUp, 
-  Upload, 
   Settings as SettingsIcon,
   ChevronRight,
-  LogOut,
-  BarChart3,
-  ShieldCheck,
-  Sparkles
+  BarChart,
+  Shield,
+  Sparkles,
+  Building,
+  MessageSquare
 } from 'lucide-react';
+import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 
 interface SidebarProps {
@@ -29,23 +30,32 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const role = user?.role || 'student';
 
   const menuItems = [
-    { title: 'لوحة التحكم', icon: LayoutDashboard, path: '/', roles: ['admin', 'supervisor', 'teacher', 'student'] },
-    { title: 'ملفي الشخصي', icon: Users, path: '/student-profile', roles: ['student'] },
-    { title: 'إدارة الطلاب', icon: Users, path: '/students', roles: ['admin', 'supervisor'] },
-    { title: 'فريق العمل', icon: ShieldCheck, path: '/staff', roles: ['admin', 'supervisor'] },
+    { title: 'لوحة التحكم', icon: LayoutDashboard, path: '/', roles: ['owner', 'admin', 'supervisor', 'teacher', 'student'] },
+    
+    // Owner specific - Focus on platform growth
+    { title: 'إدارة المجمعات', icon: Building, path: '/schools', roles: ['owner'] },
+    { title: 'إدارة مدراء المجمعات', icon: Shield, path: '/staff', roles: ['owner'] },
+    { title: 'ربط الواتساب', icon: MessageSquare, path: '/whatsapp', roles: ['owner'] },
+    { title: 'إحصائيات المنصة', icon: BarChart, path: '/reports', roles: ['owner'] },
+    { title: 'إعدادات النظام', icon: SettingsIcon, path: '/system-settings', roles: ['owner'] },
+    
+    // Management (Supervisor & Admin) - Focus on operations
+    { title: 'إدارة الطلاب والقبول', icon: Users, path: '/students', roles: ['admin', 'supervisor'] },
+    { title: 'الكادر الإداري والتعليمي', icon: Shield, path: '/staff', roles: ['admin', 'supervisor'] },
+    { title: 'إعدادات المجمع التعليمي', icon: Building, path: '/school-settings', roles: ['admin', 'supervisor'] },
+    
+    // Educational (Supervisor, Admin, Teacher)
     { title: 'الحلقات القرآنية', icon: BookOpen, path: '/circles', roles: ['admin', 'supervisor', 'teacher'] },
     { title: 'سجل الحضور', icon: Calendar, path: '/attendance', roles: ['admin', 'supervisor', 'teacher'] },
     { title: 'متابعة الحفظ', icon: TrendingUp, path: '/progress', roles: ['admin', 'supervisor', 'teacher'] },
-    { title: 'مركز التقارير', icon: BarChart3, path: '/reports', roles: ['admin', 'supervisor', 'teacher'] },
+    { title: 'مركز التقارير', icon: BarChart, path: '/reports', roles: ['admin', 'supervisor', 'teacher'] },
+    
+    // Student specific
+    { title: 'ملفي الشخصي', icon: Users, path: '/student-profile', roles: ['student'] },
   ];
 
+  // Unique key filter to prevent duplicate titles in mixed roles if any
   const filteredItems = menuItems.filter(item => item.roles.includes(role));
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/auth/signin');
-  };
 
   return (
     <aside
@@ -53,11 +63,17 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'
       }`}
     >
-      {/* Sidebar Header - Simplified */}
-      <div className="flex items-center justify-center py-6 border-b border-slate-50 dark:border-white/5 mb-4 lg:hidden">
+      {/* Sidebar Header / Branding */}
+      <div className="flex flex-col items-center justify-center py-10 px-6 border-b border-slate-50 dark:border-white/5 mb-4">
+        <div className="h-14 w-14 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl shadow-primary/20 mb-3 group-hover:rotate-6 transition-transform">
+           <Sparkles size={32} />
+        </div>
+        <h1 className="text-lg font-black tracking-tighter text-slate-900 dark:text-white">حلقات برو</h1>
+        <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.4em] mt-1">HALQAT PRO</p>
+        
         <button
           onClick={() => setSidebarOpen(false)}
-          className="text-slate-400 hover:text-primary transition-colors"
+          className="absolute left-4 top-10 text-slate-300 hover:text-primary transition-colors lg:hidden"
         >
           <ChevronRight size={24} />
         </button>
@@ -70,10 +86,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
               القائمة الرئيسية
             </h3>
             <ul className="flex flex-col gap-3">
-              {filteredItems.map((item) => (
-                <li key={item.path}>
+              {filteredItems.map((item, index) => (
+                <li key={`${item.path}-${index}`}>
                   <NavLink
                     to={item.path}
+                    onClick={() => setSidebarOpen(false)}
                     className={({ isActive }) => `
                       group relative flex items-center gap-3 rounded-xl px-4 py-3 font-black transition-all duration-500
                       ${isActive
@@ -96,7 +113,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
         </nav>
       </div>
 
-      {/* Sidebar Footer - Compact Credits */}
+      {/* Sidebar Footer */}
       <div className="px-6 pb-8 mt-auto">
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 flex items-center gap-3">
               <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -108,4 +125,3 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 };
 
 export default Sidebar;
-

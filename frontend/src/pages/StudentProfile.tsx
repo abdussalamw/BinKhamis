@@ -5,33 +5,16 @@ import {
   User as UserIcon, Phone, MapPin, Calendar, Award, 
   CheckCircle, Clock, BookOpen, ChevronLeft, 
   Hash, Flag, School, Users, Activity, LogOut,
-  Smartphone, ShieldCheck, Edit3
+  Smartphone, Shield, Edit
 } from 'lucide-react';
 
 interface StudentProfileData {
   id: string;
   name: string;
   phone: string;
-  profile: {
-    short_name: string | null;
-    national_id: string | null;
-    nationality: string | null;
-    birth_date: string | null;
-    neighborhood: string | null;
-    grade_level: string | null;
-    academic_stage: string | null;
-    program: string | null;
-    parent_phone_1: string | null;
-    parent_relation_1: string | null;
-    parent_phone_2: string | null;
-    parent_relation_2: string | null;
-    student_phone: string | null;
-    enrollment_semester: string | null;
-    completion_year: string | null;
-    end_semester: string | null;
-    end_reason: string | null;
-    studied_semesters: number | null;
-  } | null;
+  profile: any | null;
+  student_profile?: any | null;
+  active_profile?: any | null;
   enrollments?: Array<{
     id: string;
     circle: {
@@ -73,10 +56,15 @@ const StudentProfile: React.FC = () => {
       
       if (role === 'teacher' && user?.circle_id && studentCircleId !== user.circle_id) {
         setAccessDenied(true);
-      } else if (role === 'supervisor' && user?.allowed_circles?.length > 0 && !user.allowed_circles.includes(studentCircleId)) {
+      } else if ((role === 'supervisor' || role === 'manager') && user?.allowed_circles?.length > 0 && !user.allowed_circles.includes(studentCircleId)) {
          setAccessDenied(true);
       } else {
-        setStudent(data);
+        // Merge profiles for easy access in the template
+        const effectiveProfile = data.student_profile || data.active_profile || data.profile || {};
+        setStudent({
+          ...data,
+          profile: effectiveProfile
+        });
       }
     } catch (error) {
       console.error('Error fetching student profile:', error);
@@ -95,7 +83,7 @@ const StudentProfile: React.FC = () => {
   if (accessDenied) return (
     <div className="py-24 text-center max-w-lg mx-auto">
       <div className="h-20 w-20 bg-danger/10 text-danger rounded-3xl flex items-center justify-center mx-auto mb-6">
-        <ShieldCheck size={48} />
+        <Shield size={48} />
       </div>
       <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2">وصول مقيد</h2>
       <p className="text-slate-500 font-bold mb-8">عذراً، لا تملك الصلاحيات الكافية لعرض بيانات هذا الطالب.</p>
@@ -128,7 +116,7 @@ const StudentProfile: React.FC = () => {
               onClick={() => navigate(`/students/edit/${student.id}`)}
               className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all shadow-sm"
             >
-              <Edit3 size={18} />
+              <Edit size={18} />
               تعديل البيانات
             </button>
           )}
@@ -183,7 +171,7 @@ const StudentProfile: React.FC = () => {
             {/* Identity & Personal */}
             <div className="glass-card p-8 rounded-3xl shadow-xl border border-white/10">
               <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-3">
-                <ShieldCheck className="text-primary" size={24} />
+                <Shield className="text-primary" size={24} />
                 البيانات الثبوتية
               </h3>
               <div className="space-y-5">

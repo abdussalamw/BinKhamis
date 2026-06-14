@@ -1,52 +1,77 @@
 <?php
-
+ 
 namespace App\Http\Controllers\Api;
-
+ 
 use App\Http\Controllers\Controller;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
-
+ 
 class WhatsAppController extends Controller
 {
     protected $whatsapp;
-
+ 
     public function __construct(WhatsAppService $whatsapp)
     {
         $this->whatsapp = $whatsapp;
     }
-
+ 
+    /**
+     * Get instance status and QR code if disconnected
+     */
     public function getStatus()
     {
         $status = $this->whatsapp->getInstanceStatus();
+        
+        // If not connected, also try to get QR
+        if (($status['state']['instance']['state'] ?? '') !== 'open') {
+            $qrData = $this->whatsapp->connectInstance();
+            $status['qr'] = $qrData;
+        }
+ 
         return response()->json($status);
     }
-
-    public function getQR()
-    {
-        $qr = $this->whatsapp->connectInstance();
-        return response()->json($qr);
-    }
-
+ 
+    /**
+     * Restart instance
+     */
     public function restart()
     {
-        $result = $this->whatsapp->restartInstance();
-        return response()->json(['success' => $result]);
+        $success = $this->whatsapp->restartInstance();
+        return response()->json(['success' => $success]);
     }
-
+ 
+    /**
+     * Logout instance
+     */
     public function logout()
     {
-        $result = $this->whatsapp->logoutInstance();
-        return response()->json(['success' => $result]);
+        $success = $this->whatsapp->logoutInstance();
+        return response()->json(['success' => $success]);
     }
-
-    public function sendTestMessage(Request $request)
+ 
+    /**
+     * Connect (Get QR)
+     */
+    public function connect()
+    {
+        $qrData = $this->whatsapp->connectInstance();
+        if (!$qrData) {
+            return response()->json(['message' => 'Failed to generate QR'], 500);
+        }
+        return response()->json($qrData);
+    }
+ 
+    /**
+     * Send test message
+     */
+    public function sendTest(Request $request)
     {
         $request->validate([
-            'number' => 'required|string',
-            'message' => 'required|string',
+            'phone' => 'required|string',
+            'message' => 'required|string'
         ]);
-
-        $result = $this->whatsapp->sendMessage($request->number, $request->message);
-        return response()->json(['success' => $result]);
+ 
+        $success = $this->whatsapp->sendMessage($request->phone, $request->message);
+        return response()->json(['success' => $success]);
     }
 }

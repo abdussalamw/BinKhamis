@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from '../services/api';
 import { 
-  Search, Filter, MoreHorizontal, Eye, Edit3, 
+  Search, Filter, MoreHorizontal, Eye, Edit, 
   UserPlus, FileDown, UserCheck, Users, 
   MapPin, GraduationCap, ChevronDown
 } from 'lucide-react';
@@ -58,7 +58,13 @@ const StudentList: React.FC = () => {
         data = data.filter((s: any) => s.enrollments?.some((e: any) => user.allowed_circles.includes(e.circle_id)));
       }
       
-      setStudents(data);
+      // Map students to ensure they have a consistent profile object
+      const mappedData = data.map((s: any) => ({
+        ...s,
+        profile: s.student_profile || s.active_profile || s.profile || {}
+      }));
+      
+      setStudents(mappedData);
     } catch (error) {
       console.error('Error fetching students:', error);
     } finally {
@@ -272,7 +278,7 @@ const StudentList: React.FC = () => {
                           onClick={() => navigate(`/students/${student.id}/edit`)}
                           className="p-2 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-amber-500 hover:shadow-lg transition-all border border-slate-100 dark:border-white/5"
                         >
-                            <Edit3 size={14} />
+                            <Edit size={14} />
                         </button>
                         <button className="p-2 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-600 hover:shadow-lg transition-all border border-slate-100 dark:border-white/5">
                             <MoreHorizontal size={14} />

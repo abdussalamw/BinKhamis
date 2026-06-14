@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Circle;
+use App\Models\AcademicTerm;
 use Illuminate\Http\Request;
 
 class CircleController extends Controller
@@ -13,7 +14,7 @@ class CircleController extends Controller
      */
     public function index()
     {
-        $circles = Circle::with('teacher')
+        $circles = Circle::with(['teacher', 'term'])
             ->withCount(['enrollments' => function($query) {
                 $query->where('status', 'active');
             }])
@@ -35,11 +36,20 @@ class CircleController extends Controller
             'is_active' => 'boolean',
             'description' => 'nullable|string',
             'schedule' => 'nullable|array',
+            'term_id' => 'nullable|exists:academic_terms,id',
+            'period' => 'nullable|string',
         ]);
+
+        if (!isset($validated['term_id']) || empty($validated['term_id'])) {
+            $currentTerm = AcademicTerm::where('is_current', true)->first();
+            if ($currentTerm) {
+                $validated['term_id'] = $currentTerm->id;
+            }
+        }
 
         $circle = Circle::create($validated);
 
-        return response()->json($circle->load('teacher'), 201);
+        return response()->json($circle->load(['teacher', 'term']), 201);
     }
 
     /**
@@ -47,7 +57,7 @@ class CircleController extends Controller
      */
     public function show(string $id)
     {
-        $circle = Circle::with(['teacher', 'enrollments' => function($query) {
+        $circle = Circle::with(['teacher', 'term', 'enrollments' => function($query) {
                 $query->where('status', 'active')->with('student.profile');
             }])
             ->withCount(['enrollments' => function($query) {
@@ -73,11 +83,13 @@ class CircleController extends Controller
             'is_active' => 'boolean',
             'description' => 'nullable|string',
             'schedule' => 'nullable|array',
+            'term_id' => 'nullable|exists:academic_terms,id',
+            'period' => 'nullable|string',
         ]);
 
         $circle->update($validated);
 
-        return response()->json($circle->load('teacher'));
+        return response()->json($circle->load(['teacher', 'term']));
     }
 
     /**

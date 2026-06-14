@@ -43,21 +43,49 @@ class StatsController extends Controller
 
     public function attendanceChart()
     {
-        $data = [];
         $days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        $startDate = Carbon::today()->subDays(6);
+        $endDate = Carbon::today();
         
+        // D5: Single query for all attendance stats grouped by date
+        $attendanceByDate = Attendance::whereBetween('date', [$startDate, $endDate])
+            ->selectRaw("date::date, COUNT(*) as total, COUNT(*) FILTER (WHERE status = 'present') as present")
+            ->groupByRaw('date::date')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->date instanceof \Carbon\Carbon 
+                    ? $item->date->toDateString() 
+                    : date('Y-m-d', strtotime($item->date));
+            });
+
+        // Single query for all progress Sum grouped by date
+        $progressByDate = ProgressTracking::whereBetween('date', [$startDate, $endDate])
+            ->selectRaw("date::date, SUM(pages_count) as pages")
+            ->groupByRaw('date::date')
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->date instanceof \Carbon\Carbon 
+                    ? $item->date->toDateString() 
+                    : date('Y-m-d', strtotime($item->date));
+            });
+
+        $data = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = Carbon::today()->subDays($i);
-            $present = Attendance::whereDate('date', $date)->where('status', 'present')->count();
-            $total = Attendance::whereDate('date', $date)->count();
+            $dateStr = $date->toDateString();
             
+            $attendanceStats = $attendanceByDate->get($dateStr);
+            $total = $attendanceStats ? (int) $attendanceStats->total : 0;
+            $present = $attendanceStats ? (int) $attendanceStats->present : 0;
             $rate = $total > 0 ? round(($present / $total) * 100) : 0;
-            $progress = ProgressTracking::whereDate('date', $date)->sum('pages_count') ?? 0;
+            
+            $progress = $progressByDate->get($dateStr);
+            $pages = $progress ? (int) $progress->pages : 0;
             
             $data[] = [
                 'name' => $days[$date->dayOfWeek],
                 'attendance' => $rate,
-                'progress' => $progress, 
+                'progress' => $pages,
             ];
         }
 

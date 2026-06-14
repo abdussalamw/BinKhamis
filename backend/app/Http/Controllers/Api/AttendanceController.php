@@ -52,6 +52,7 @@ class AttendanceController extends Controller
                         ],
                         [
                             'status' => $record['status'],
+                            'term_id' => $enrollment->term_id, // Save the term_id from enrollment
                             'recorded_by' => auth()->id() ?? User::where('role', 'admin')->first()->id,
                         ]
                     );

@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use App\Traits\BelongsToSchool;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ActivityLog extends Model
 {
-    use HasUuids;
+    use HasFactory, BelongsToSchool, HasUuids;
 
-    public $timestamps = false;
+    // Table has only created_at, no updated_at
+    const UPDATED_AT = null;
 
     protected $fillable = [
         'user_id',
@@ -22,17 +23,17 @@ class ActivityLog extends Model
         'new_values',
         'ip_address',
         'user_agent',
-        'created_at',
+        'school_id',
     ];
 
     protected $casts = [
         'old_values' => 'array',
         'new_values' => 'array',
-        'created_at' => 'datetime',
     ];
 
-    public function user(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
 }
+

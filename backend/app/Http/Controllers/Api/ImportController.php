@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Profile;
+use App\Models\StudentProfile;
 use App\Models\Circle;
 use App\Models\Enrollment;
 use App\Models\AcademicTerm;
@@ -64,17 +64,16 @@ class ImportController extends Controller
                         ]
                     );
 
-                    Profile::updateOrCreate(
+                    StudentProfile::updateOrCreate(
                         ['user_id' => $user->id],
                         [
-                            'type' => 'student',
                             'short_name' => $row['الاسم المختصر'] ?? null,
                             'national_id' => $row['رقم الإثبات'] ?? null,
                             'nationality' => $row['الجنسية'] ?? null,
                             'neighborhood' => $row['الحي'] ?? null,
                             'grade_level' => $row['الصف'] ?? null,
                             'academic_stage' => $row['المرحلة'] ?? null,
-                            'program' => $row['البرنامج'] ?? null,
+                            'current_level' => $row['البرنامج'] ?? null,
                             'parent_phone_1' => $row['جوال ولي الأمر1'] ?? null,
                             'parent_relation_1' => $row['القرابة1'] ?? null,
                             'parent_phone_2' => $row['جوال ولي الأمر 2'] ?? null,

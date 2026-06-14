@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\TeacherProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -14,8 +15,8 @@ class StaffController extends Controller
      */
     public function index()
     {
-        $staff = User::whereIn('role', ['admin', 'teacher', 'manager'])
-            ->with('profile')
+        $staff = User::whereIn('role', ['owner', 'admin', 'teacher', 'manager', 'supervisor'])
+            ->with('teacherProfile')
             ->latest()
             ->get();
             
@@ -29,33 +30,38 @@ class StaffController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'required|string',
-            'role' => 'required|in:admin,teacher,manager',
-            'password' => 'required|string|min:8',
+            'phone' => 'required|string|unique:users,phone',
+            'role' => 'required|in:admin,teacher,manager,supervisor',
+            'password' => 'nullable|string|min:8', // Allow null for imported/activation flow
             'bank_account_number' => 'nullable|string',
             'specialization' => 'nullable|string',
             'qualification' => 'nullable|string',
         ]);
 
+        // Security Check: Only Owner can create Admin
+        if ($validated['role'] === 'admin' && $request->user()->role !== 'owner') {
+            return response()->json(['message' => 'عذراً، المالك فقط يمكنه منح صلاحية مدير النظام.'], 403);
+        }
+
         return DB::transaction(function() use ($validated) {
             $user = User::create([
                 'name' => $validated['name'],
-                'email' => $validated['email'],
                 'phone' => $validated['phone'],
                 'role' => $validated['role'],
-                'password' => bcrypt($validated['password']),
+                'password' => $validated['password'] ? bcrypt($validated['password']) : null,
                 'is_active' => true,
             ]);
 
-            $user->profile()->create([
-                'type' => $validated['role'],
-                'bank_account_number' => $validated['bank_account_number'],
-                'specialization' => $validated['specialization'],
-                'qualification' => $validated['qualification'],
+            $user->teacherProfile()->create([
+                'bank_account_number' => $validated['bank_account_number'] ?? null,
+                'specialization' => $validated['specialization'] ?? null,
+                'metadata' => ['qualification' => $validated['qualification'] ?? null],
             ]);
 
-            return response()->json($user->load('profile'), 201);
+            // Assign Spatie Role
+            $user->assignRole($validated['role']);
+
+            return response()->json($user->load('teacherProfile'), 201);
         });
     }
 
@@ -65,7 +71,7 @@ class StaffController extends Controller
     public function show(string $id)
     {
         $member = User::whereIn('role', ['admin', 'teacher', 'manager'])
-            ->with('profile')
+            ->with('teacherProfile')
             ->findOrFail($id);
             
         return response()->json($member);
@@ -96,14 +102,14 @@ class StaffController extends Controller
                 'bank_account_number', 'specialization', 'qualification'
             ]));
             
-            if ($user->profile) {
-                $user->profile->update($profileData);
+            if ($user->teacherProfile) {
+                $user->teacherProfile->update($profileData);
             } else {
-                $user->profile()->create(array_merge($profileData, ['type' => $user->role]));
+                $user->teacherProfile()->create($profileData);
             }
         });
 
-        return response()->json($user->load('profile'));
+        return response()->json($user->load('teacherProfile'));
     }
 
     /**
@@ -125,12 +131,12 @@ class StaffController extends Controller
     {
         $user = User::whereIn('role', ['admin', 'teacher', 'manager'])->findOrFail($id);
         
-        // Prevent deletion if the teacher is assigned to a circle
-        if ($user->role === 'teacher' && $user->circle) {
-             return response()->json(['message' => 'لا يمكن حذف المعلم لأنه مرتبط بحلقة نشطة. يرجى تغيير معلم الحلقة أولاً.'], 422);
+        // FIX C3: Prevent deletion if the teacher has active circles
+        if ($user->role === 'teacher' && $user->circles()->exists()) {
+            return response()->json(['message' => 'لا يمكن حذف المعلم لأنه مرتبط بحلقة نشطة. يرجى تغيير معلم الحلقة أولاً.'], 422);
         }
 
-        $user->profile()->delete();
+        $user->teacherProfile()->delete();
         $user->delete();
 
         return response()->json(['message' => 'تم حذف العضو بنجاح']);

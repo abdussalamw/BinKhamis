@@ -2,39 +2,39 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\BelongsToSchool;
 
 class Circle extends Model
 {
-    use HasUuids, SoftDeletes;
+    use HasFactory, SoftDeletes, BelongsToSchool;
 
     protected $fillable = [
         'name',
-        'description',
-        'location',
-        'schedule',
-        'capacity',
         'teacher_id',
+        'description',
+        'max_students',
         'is_active',
+        'academic_term_id',
+        'period',
+        'school_id',
     ];
 
-    protected $casts = [
-        'schedule' => 'array',
-        'is_active' => 'boolean',
-    ];
-
-    public function teacher(): BelongsTo
+    public function teacher()
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
 
-    public function enrollments(): HasMany
+    public function students()
     {
-        return $this->hasMany(Enrollment::class);
+        return $this->belongsToMany(User::class, 'enrollments', 'circle_id', 'student_id')
+            ->withPivot('enrolled_at', 'status');
+    }
+
+    public function academicTerm()
+    {
+        return $this->belongsTo(AcademicTerm::class);
     }
 }

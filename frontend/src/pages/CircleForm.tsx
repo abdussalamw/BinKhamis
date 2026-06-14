@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
   ChevronLeft, Save, Users, MapPin, 
-  ShieldCheck, UserCircle, 
-  Trash2, AlertCircle
+  Shield, UserCircle, 
+  Trash, AlertCircle
 } from 'lucide-react';
 
 interface Teacher {
@@ -97,7 +97,7 @@ const CircleForm: React.FC = () => {
             <h1 className="text-xl font-black text-slate-800 dark:text-white">
               {isEdit ? `تعديل بيانات: ${formData.name}` : 'فتح حلقة تعليمية جديدة'}
             </h1>
-            <p className="text-xs font-bold text-slate-400">أدخل تفاصيل الحلقة وتعيين المعلم المسؤول</p>
+            <p className="text-xs font-bold text-slate-400">أدخل تفاصيل الحلقة وتعيين معلم الحلقة المسؤول</p>
           </div>
         </div>
         <button onClick={() => navigate('/circles')} className="p-3 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 dark:bg-slate-800 transition-all">
@@ -109,7 +109,7 @@ const CircleForm: React.FC = () => {
         {/* Basic Info */}
         <div className="glass-card p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-white/10">
           <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-            <ShieldCheck size={20} className="text-primary" />
+            <Shield size={20} className="text-primary" />
             المعلومات الأساسية
           </h3>
           
@@ -172,14 +172,14 @@ const CircleForm: React.FC = () => {
           </h3>
 
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">المعلم المسؤول</label>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">معلم الحلقة المسؤول</label>
             <select 
               required
               className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-primary/20 font-bold text-slate-700 dark:text-white transition-all cursor-pointer appearance-none"
               value={formData.teacher_id}
               onChange={e => setFormData({...formData, teacher_id: e.target.value})}
             >
-              <option value="">اختر معلماً...</option>
+              <option value="">اختر معلم الحلقة...</option>
               {teachers.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
@@ -211,7 +211,7 @@ const CircleForm: React.FC = () => {
              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 flex gap-3">
                 <AlertCircle className="text-amber-500 flex-shrink-0" size={20} />
                 <p className="text-[10px] font-bold text-amber-700 dark:text-amber-500">
-                   تنبيه: تغيير المعلم سيؤدي لنقل صلاحية التحضير وتتبع الحفظ لهذا المعلم بشكل فوري.
+                   تنبيه: تغيير معلم الحلقة سيؤدي لنقل صلاحية التحضير وتتبع الحفظ لهذا المعلم بشكل فوري.
                 </p>
              </div>
           </div>
@@ -236,7 +236,7 @@ const CircleForm: React.FC = () => {
                   className="p-4 rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
                   title="حذف الحلقة"
                 >
-                  <Trash2 size={24} />
+                  <Trash size={24} />
                 </button>
               )}
               <button 

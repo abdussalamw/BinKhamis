@@ -16,9 +16,14 @@ import StaffForm from './pages/StaffForm';
 import Settings from './pages/Settings';
 import Reports from './pages/Reports';
 import SignIn from './pages/SignIn';
+import SystemSettings from './pages/SystemSettings';
+import SchoolManagement from './pages/SchoolManagement';
+import SchoolSettings from './pages/SchoolSettings';
+import WhatsAppSettings from './pages/WhatsAppSettings';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
+  console.log('App component rendering');
   const [loading, setLoading] = useState<boolean>(true);
   const { pathname } = useLocation();
 
@@ -51,19 +56,27 @@ function App() {
           <Route index element={<Dashboard />} />
           <Route path="/students/:id" element={<StudentProfile />} />
           
-          {/* Admin & Supervisor Only */}
-          <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor']} />}>
+          {/* Owner Only */}
+          <Route element={<ProtectedRoute allowedRoles={['owner']} />}>
+            <Route path="/system-settings" element={<SystemSettings />} />
+            <Route path="/schools" element={<SchoolManagement />} />
+            <Route path="/whatsapp" element={<WhatsAppSettings />} />
+          </Route>
+
+          {/* Admin, Supervisor & Owner */}
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'owner']} />}>
             <Route path="/students" element={<StudentList />} />
             <Route path="/students/new" element={<StudentForm />} />
             <Route path="/students/:id/edit" element={<StudentForm />} />
             <Route path="/staff" element={<StaffList />} />
             <Route path="/staff/new" element={<StaffForm />} />
             <Route path="/staff/:id/edit" element={<StaffForm />} />
+            <Route path="/school-settings" element={<SchoolSettings />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
 
-          {/* Teacher, Supervisor & Admin */}
-          <Route element={<ProtectedRoute allowedRoles={['teacher', 'supervisor', 'admin']} />}>
+          {/* Teacher, Supervisor, Admin & Owner */}
+          <Route element={<ProtectedRoute allowedRoles={['teacher', 'supervisor', 'admin', 'owner']} />}>
             <Route path="/attendance" element={<AttendanceBoard />} />
             <Route path="/progress" element={<ProgressTracking />} />
             <Route path="/reports" element={<Reports />} />

@@ -3,7 +3,7 @@ import api from '../services/api';
 import { 
   Users, User as UserIcon, MapPin, ChevronLeft, 
   LayoutGrid, List, Plus, Search, Filter,
-  Edit3, Settings
+  Edit, Settings
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -168,7 +168,7 @@ const CircleList: React.FC = () => {
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 font-bold text-[10px]">
                         <UserIcon size={12} className="text-primary/60" />
-                        <span>{circle.teacher?.name || 'لم يتم تعيين معلم'}</span>
+                        <span>{circle.teacher?.name || 'لم يتم تعيين معلم حلقة'}</span>
                     </div>
                     <div className="flex items-center gap-2 text-slate-400 font-bold text-[9px]">
                         <MapPin size={11} className="text-slate-300" />
@@ -200,7 +200,7 @@ const CircleList: React.FC = () => {
                 <thead>
                     <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
                         <th className="py-4 px-6 font-black text-slate-400 uppercase text-[9px] tracking-widest">اسم الحلقة</th>
-                        <th className="py-4 px-6 font-black text-slate-400 uppercase text-[9px] tracking-widest">المعلم المشرف</th>
+                        <th className="py-4 px-6 font-black text-slate-400 uppercase text-[9px] tracking-widest">معلم الحلقة</th>
                         <th className="py-4 px-6 font-black text-slate-400 uppercase text-[9px] tracking-widest">الموقع</th>
                         <th className="py-4 px-6 font-black text-slate-400 uppercase text-[9px] tracking-widest text-center">الطلاب</th>
                         <th className="py-4 px-6 font-black text-slate-400 uppercase text-[9px] tracking-widest text-left">إدارة</th>
@@ -228,7 +228,7 @@ const CircleList: React.FC = () => {
                                       <Settings size={14} />
                                   </Link>
                                   <Link to={`/circles/${circle.id}/edit`} className="p-2 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-amber-500 transition-all border border-slate-100 dark:border-white/5">
-                                      <Edit3 size={14} />
+                                      <Edit size={14} />
                                   </Link>
                                 </div>
                             </td>

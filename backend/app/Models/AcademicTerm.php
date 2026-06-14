@@ -2,19 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\BelongsToSchool;
 
 class AcademicTerm extends Model
 {
-    use HasUuids;
+    use HasFactory, SoftDeletes, BelongsToSchool;
 
     protected $fillable = [
         'name',
         'start_date',
         'end_date',
         'is_current',
+        'school_id',
     ];
 
     protected $casts = [
@@ -23,13 +25,8 @@ class AcademicTerm extends Model
         'is_current' => 'boolean',
     ];
 
-    public function enrollments(): HasMany
+    public function circles()
     {
-        return $this->hasMany(Enrollment::class, 'term_id');
-    }
-
-    public function attendance(): HasMany
-    {
-        return $this->hasMany(Attendance::class, 'term_id');
+        return $this->hasMany(Circle::class);
     }
 }

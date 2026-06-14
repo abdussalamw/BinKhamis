@@ -2,42 +2,32 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Traits\BelongsToSchool;
 
 class Attendance extends Model
 {
-    use HasUuids;
+    use HasFactory, BelongsToSchool;
 
     protected $table = 'attendance';
 
     protected $fillable = [
-        'enrollment_id',
-        'term_id',
+        'student_id',
+        'circle_id',
         'date',
         'status',
-        'teacher_note',
-        'recorded_by',
+        'note',
+        'school_id',
     ];
 
-    protected $casts = [
-        'date' => 'date',
-    ];
-
-    public function enrollment(): BelongsTo
+    public function student()
     {
-        return $this->belongsTo(Enrollment::class);
+        return $this->belongsTo(User::class, 'student_id');
     }
 
-    public function term(): BelongsTo
+    public function circle()
     {
-        return $this->belongsTo(AcademicTerm::class, 'term_id');
-    }
-
-    public function recorder(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'recorded_by');
+        return $this->belongsTo(Circle::class);
     }
 }

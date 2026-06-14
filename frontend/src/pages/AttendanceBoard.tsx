@@ -11,10 +11,10 @@ import {
   AlertCircle,
   Search,
   Filter,
-  CheckCircle2,
+  Check as CheckCircle2,
   Users,
   UserMinus,
-  Clock3
+  Loader
 } from 'lucide-react';
 
 const AttendanceBoard: React.FC = () => {
@@ -253,7 +253,7 @@ const AttendanceBoard: React.FC = () => {
                 disabled={saving}
                 className="flex items-center gap-2 px-8 py-3 rounded-2xl bg-primary text-white text-xs font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50"
               >
-                {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                {saving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />}
                 <span>حفظ التحضير</span>
               </button>
            </div>
@@ -284,7 +284,7 @@ const AttendanceBoard: React.FC = () => {
             </div>
          </div>
          <div className="bg-amber-500/5 p-4 rounded-3xl border border-amber-500/10 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500"><Clock3 size={20} /></div>
+            <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500"><Clock size={20} /></div>
             <div>
                <p className="text-[9px] font-black text-amber-600/60 uppercase tracking-tighter">المتأخرون</p>
                <p className="text-lg font-black text-amber-600">{stats.late}</p>
@@ -324,7 +324,7 @@ const AttendanceBoard: React.FC = () => {
               {loading ? (
                 <tr><td colSpan={dates.length + 1} className="py-24 text-center">
                     <div className="flex flex-col items-center gap-3">
-                        <Loader2 size={32} className="text-primary animate-spin" />
+                        <Loader size={32} className="text-primary animate-spin" />
                         <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">جاري سحب البيانات...</span>
                     </div>
                 </td></tr>

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Circle;
 use App\Models\Attendance;
 use App\Models\ProgressTracking;
+use App\Models\AcademicTerm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -16,14 +17,41 @@ class ReportsController extends Controller
     public function dashboardOverview(Request $request)
     {
         Carbon::setLocale('ar');
+        $currentTerm = AcademicTerm::where('is_current', true)->first();
+        $termId = $currentTerm ? $currentTerm->id : null;
         
         // 1. Core KPIs
-        $totalStudents = User::where('role', 'student')->count();
-        $activeCircles = Circle::count();
-        $totalAttendance = Attendance::count();
+        $totalStudentsQuery = User::where('role', 'student');
+        if ($termId) {
+            $totalStudentsQuery->whereHas('enrollments', function($q) use ($termId) {
+                $q->where('term_id', $termId)->where('status', 'active');
+            });
+        }
+        $totalStudents = $totalStudentsQuery->count();
+
+        $activeCirclesQuery = Circle::query();
+        if ($termId) {
+            $activeCirclesQuery->where('term_id', $termId);
+        }
+        $activeCircles = $activeCirclesQuery->count();
         
+        $attendanceQuery = Attendance::query();
+        if ($termId) {
+            $attendanceQuery->where('term_id', $termId);
+        }
+        $totalAttendance = (clone $attendanceQuery)->count();
+        
+        $presentCount = (clone $attendanceQuery)->where('status', 'present')->count();
+        $lateCount = (clone $attendanceQuery)->where('status', 'late')->count();
+        $excusedCount = (clone $attendanceQuery)->where('status', 'excused')->count();
+        $absentCount = (clone $attendanceQuery)->where('status', 'absent')->count();
+
         $attendanceRate = $totalAttendance > 0 
-            ? round((Attendance::where('status', 'present')->count() / $totalAttendance) * 100, 1)
+            ? round(($presentCount / $totalAttendance) * 100, 1)
+            : 0;
+        
+        $lateRate = $totalAttendance > 0 
+            ? round(($lateCount / $totalAttendance) * 100, 1)
             : 0;
 
         $totalProgress = ProgressTracking::count();
@@ -35,12 +63,18 @@ class ReportsController extends Controller
             $month = $date->month;
             $year = $date->year;
             
+            $baseQuery = Attendance::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
+                ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year]);
+
             $monthlyProgress[] = [
                 'name' => $date->translatedFormat('F'),
                 'achievements' => ProgressTracking::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
                     ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year])
                     ->count(),
-                'attendance' => $this->getAttendanceRateForMonth($date),
+                'present' => (clone $baseQuery)->where('status', 'present')->count(),
+                'late' => (clone $baseQuery)->where('status', 'late')->count(),
+                'absent' => (clone $baseQuery)->where('status', 'absent')->count(),
+                'excused' => (clone $baseQuery)->where('status', 'excused')->count(),
                 'students' => User::where('role', 'student')
                     ->whereRaw("created_at::date <= ?", [$date->endOfMonth()->toDateString()])
                     ->count()
@@ -60,7 +94,10 @@ class ReportsController extends Controller
             ->get()
             ->map(function($circle) {
                 $ids = $circle->enrollments->pluck('id');
-                $att = $ids->count() > 0 ? Attendance::whereIn('enrollment_id', $ids)->avg(DB::raw("CASE WHEN status='present' THEN 100 ELSE 0 END")) ?? 0 : 0;
+                $totalAtt = $ids->count() > 0 ? Attendance::whereIn('enrollment_id', $ids)->count() : 0;
+                $presentAtt = $ids->count() > 0 ? Attendance::whereIn('enrollment_id', $ids)->where('status', 'present')->count() : 0;
+                $att = $totalAtt > 0 ? ($presentAtt / $totalAtt) * 100 : 0;
+                
                 return [
                     'id' => $circle->id,
                     'name' => $circle->name,
@@ -80,9 +117,9 @@ class ReportsController extends Controller
                 $studentIds = DB::table('profiles')->where('current_level', $stage->name)->pluck('user_id');
                 $enrollmentIds = DB::table('enrollments')->whereIn('student_id', $studentIds)->pluck('id');
                 
-                $att = $enrollmentIds->count() > 0 
-                    ? Attendance::whereIn('enrollment_id', $enrollmentIds)->avg(DB::raw("CASE WHEN status='present' THEN 100 ELSE 0 END")) ?? 0 
-                    : 0;
+                $totalAtt = $enrollmentIds->count() > 0 ? Attendance::whereIn('enrollment_id', $enrollmentIds)->count() : 0;
+                $presentAtt = $enrollmentIds->count() > 0 ? Attendance::whereIn('enrollment_id', $enrollmentIds)->where('status', 'present')->count() : 0;
+                $att = $totalAtt > 0 ? ($presentAtt / $totalAtt) * 100 : 0;
 
                 return [
                     'name' => $stage->name,
@@ -91,22 +128,63 @@ class ReportsController extends Controller
                 ];
             });
 
+        // 6. Top Students
+        $topStudents = User::where('role', 'student')
+            ->with('profile')
+            ->get()
+            ->map(function($student) {
+                $enrollmentIds = DB::table('enrollments')->where('student_id', $student->id)->pluck('id');
+                $totalAtt = $enrollmentIds->count() > 0 ? Attendance::whereIn('enrollment_id', $enrollmentIds)->count() : 0;
+                $presentAtt = $enrollmentIds->count() > 0 ? Attendance::whereIn('enrollment_id', $enrollmentIds)->where('status', 'present')->count() : 0;
+                $lateAtt = $enrollmentIds->count() > 0 ? Attendance::whereIn('enrollment_id', $enrollmentIds)->where('status', 'late')->count() : 0;
+                
+                return [
+                    'id' => $student->id,
+                    'name' => $student->name,
+                    'level' => $student->profile->current_level ?? 'غير محدد',
+                    'presence' => $presentAtt,
+                    'late' => $lateAtt,
+                    'rate' => $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100, 1) : 0
+                ];
+            })->sortByDesc('rate')->values()->take(5);
+
+        $bestCircle = $circleRankings->first();
+        $insights = [
+            "الفصل الدراسي الحالي: " . ($currentTerm->name ?? 'غير محدد'),
+            "إجمالي سجلات الحضور لهذا الفصل: $totalAttendance سجلاً.",
+            "نسبة الانضباط العام (الحضور بدون تأخير): $attendanceRate%.",
+            "نسبة التأخر الإجمالية: $lateRate%."
+        ];
+
+        if ($bestCircle) {
+            $insights[] = "الحلقة الأكثر انضباطاً هي حلقة ({$bestCircle['name']}) بنسبة {$bestCircle['attendance']}% (معلمها: {$bestCircle['teacher']}).";
+        }
+
+        if ($lateRate > 20) {
+            $insights[] = "تنبيه: هناك ارتفاع ملحوظ في نسبة التأخر ($lateRate%)، يوصى بالتواصل مع أولياء الأمور.";
+        }
+
         return response()->json([
+            'term' => $currentTerm,
             'kpis' => [
                 'total_students' => $totalStudents,
                 'active_circles' => $activeCircles,
                 'attendance_rate' => $attendanceRate,
-                'avg_progress' => $avgProgress
+                'late_rate' => $lateRate,
+                'avg_progress' => $avgProgress,
+                'counts' => [
+                    'present' => $presentCount,
+                    'late' => $lateCount,
+                    'absent' => $absentCount,
+                    'excused' => $excusedCount
+                ]
             ],
             'monthlyProgress' => $monthlyProgress,
             'programDistribution' => $programDistribution,
             'circleRankings' => $circleRankings,
             'stageBreakdown' => $stageBreakdown,
-            'insights' => [
-                "إجمالي الطلاب المسجلين حالياً هو $totalStudents طالباً.",
-                "متوسط الإنجاز لكل طالب هو $avgProgress عملية تسميع.",
-                "نسبة الانضباط العام في المجمع هي $attendanceRate%."
-            ]
+            'topStudents' => $topStudents,
+            'insights' => $insights
         ]);
     }
 
@@ -120,8 +198,11 @@ class ReportsController extends Controller
         $attendance = Attendance::whereIn('enrollment_id', $enrollmentIds)
             ->select('date', 'status')
             ->orderBy('date', 'desc')
-            ->limit(10)
+            ->limit(20)
             ->get();
+
+        $allAttendance = Attendance::whereIn('enrollment_id', $enrollmentIds)->get();
+        $total = $allAttendance->count();
 
         $progressCount = ProgressTracking::where('student_id', $id)->count();
 
@@ -129,8 +210,15 @@ class ReportsController extends Controller
             'student' => $student,
             'attendance' => $attendance,
             'summary' => [
-                'attendance_rate' => $attendance->count() > 0 ? round(($attendance->where('status', 'present')->count() / $attendance->count()) * 100, 1) : 0,
-                'total_achievements' => $progressCount
+                'attendance_rate' => $total > 0 ? round(($allAttendance->where('status', 'present')->count() / $total) * 100, 1) : 0,
+                'late_rate' => $total > 0 ? round(($allAttendance->where('status', 'late')->count() / $total) * 100, 1) : 0,
+                'total_achievements' => $progressCount,
+                'counts' => [
+                    'present' => $allAttendance->where('status', 'present')->count(),
+                    'late' => $allAttendance->where('status', 'late')->count(),
+                    'absent' => $allAttendance->where('status', 'absent')->count(),
+                    'excused' => $allAttendance->where('status', 'excused')->count(),
+                ]
             ]
         ]);
     }
@@ -141,18 +229,26 @@ class ReportsController extends Controller
         $circle = Circle::with('teacher')->findOrFail($id);
         $enrollmentIds = DB::table('enrollments')->where('circle_id', $id)->pluck('id');
 
+        $allAttendance = Attendance::whereIn('enrollment_id', $enrollmentIds)->get();
+        $total = $allAttendance->count();
+
         $recentAttendance = Attendance::whereIn('enrollment_id', $enrollmentIds)
             ->orderBy('date', 'desc')
-            ->limit(10)
+            ->limit(15)
             ->get();
 
         return response()->json([
             'circle' => $circle,
             'stats' => [
                 'total_students' => $enrollmentIds->count(),
-                'attendance_rate' => Attendance::whereIn('enrollment_id', $enrollmentIds)->count() > 0 
-                    ? round((Attendance::whereIn('enrollment_id', $enrollmentIds)->where('status', 'present')->count() / Attendance::whereIn('enrollment_id', $enrollmentIds)->count()) * 100, 1)
-                    : 0,
+                'attendance_rate' => $total > 0 ? round(($allAttendance->where('status', 'present')->count() / $total) * 100, 1) : 0,
+                'late_rate' => $total > 0 ? round(($allAttendance->where('status', 'late')->count() / $total) * 100, 1) : 0,
+                'counts' => [
+                    'present' => $allAttendance->where('status', 'present')->count(),
+                    'late' => $allAttendance->where('status', 'late')->count(),
+                    'absent' => $allAttendance->where('status', 'absent')->count(),
+                    'excused' => $allAttendance->where('status', 'excused')->count(),
+                ]
             ],
             'recent_attendance' => $recentAttendance
         ]);
