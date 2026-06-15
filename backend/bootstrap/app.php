@@ -8,7 +8,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
-        apiPrefix: 'api',
+        apiPrefix: (str_contains($_SERVER['SCRIPT_NAME'] ?? '', '/api/index.php') || str_contains($_SERVER['REQUEST_URI'] ?? '', '/api/index.php')) ? '' : 'api',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
