@@ -138,7 +138,7 @@ class AuthController extends Controller
         ]);
 
         // Send via WhatsApp (send the plain code, only store hash)
-        $message = "رمز التحقق الخاص بك لنظام بن خميس هو: $code \nصالح لمدة 10 دقائق لتنشيط حسابك.";
+        $message = "رمز التحقق الخاص بك لنظام حلقات برو هو: $code \nصالح لمدة 10 دقائق لتنشيط حسابك.";
         
         try {
             $this->whatsapp->sendMessage($phone, $message);

@@ -10,7 +10,7 @@ const Settings: React.FC = () => {
   const [waStatus, setWaStatus] = useState<any>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [testNumber, setTestNumber] = useState('');
-  const [testMessage, setTestMessage] = useState('رسالة تجريبية من نظام بن خميس');
+  const [testMessage, setTestMessage] = useState('رسالة تجريبية من نظام حلقات برو');
   
   // Import State
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -281,7 +281,7 @@ const Settings: React.FC = () => {
                    <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider pr-1">اسم المؤسسة</label>
-                        <input type="text" defaultValue="حلقات بن خميس" className="w-full rounded-xl bg-slate-50 dark:bg-slate-800 p-3 text-sm font-bold border-none outline-none ring-2 ring-transparent focus:ring-primary/10 transition-all" />
+                        <input type="text" defaultValue="حلقات برو" className="w-full rounded-xl bg-slate-50 dark:bg-slate-800 p-3 text-sm font-bold border-none outline-none ring-2 ring-transparent focus:ring-primary/10 transition-all" />
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider pr-1">الفصل الدراسي الحالي</label>
@@ -328,7 +328,7 @@ const Settings: React.FC = () => {
                   <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">اسم الجلسة</p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">{waStatus?.instance?.instance?.instanceName || 'BinKhamis'}</span>
+                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">{waStatus?.instance?.instance?.instanceName || 'hpro'}</span>
                       <History size={14} className="text-primary" />
                     </div>
                   </div>

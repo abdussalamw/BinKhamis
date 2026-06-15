@@ -43,7 +43,7 @@ class StudentController extends Controller
             $user = User::create([
                 'name' => $validated['name'],
                 'phone' => $validated['phone'],
-                'email' => $validated['email'] ?? ($validated['phone'] . '@binkhamis.com'),
+                'email' => $validated['email'] ?? ($validated['phone'] . '@hpro.com'),
                 'role' => 'student',
                 'password' => bcrypt('student123'),
                 'is_active' => true,

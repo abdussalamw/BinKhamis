@@ -172,7 +172,7 @@ const CircleList: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2 text-slate-400 font-bold text-[9px]">
                         <MapPin size={11} className="text-slate-300" />
-                        <span>{circle.location || 'قاعة بن خميس العامة'}</span>
+                        <span>{circle.location || 'قاعة حلقات برو العامة'}</span>
                     </div>
                 </div>
               </div>

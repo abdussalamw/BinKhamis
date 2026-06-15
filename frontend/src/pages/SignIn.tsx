@@ -67,7 +67,7 @@ const SignIn: React.FC = () => {
              <div className="h-20 w-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
                 <LogIn className="text-primary w-10 h-10" />
              </div>
-             <h1 className="text-3xl font-black text-slate-800 dark:text-white">نظام بن خميس</h1>
+             <h1 className="text-3xl font-black text-slate-800 dark:text-white">حلقات برو</h1>
              <p className="text-slate-400 font-bold mt-2">مرحباً بك، سجل دخولك للمتابعة</p>
           </div>
  
