@@ -37,7 +37,7 @@ Route::middleware('tenant')->group(function() {
         Route::post('auth/logout', [AuthController::class, 'logout']);
  
         // Super Admin Routes (Owner only)
-        Route::middleware('role:owner')->group(function () {
+        Route::middleware('role:superadmin,owner')->group(function () {
             Route::get('super-admin/schools', [SuperAdminController::class, 'index']);
             Route::post('super-admin/schools', [SuperAdminController::class, 'storeSchool']);
             Route::put('super-admin/schools/{id}', [SuperAdminController::class, 'updateSchool']);
@@ -46,10 +46,10 @@ Route::middleware('tenant')->group(function() {
  
         // School Info (Tenant specific)
         Route::get('school-info', [SchoolController::class, 'show']);
-        Route::put('school-info', [SchoolController::class, 'update'])->middleware('role:supervisor,admin,owner');
+        Route::put('school-info', [SchoolController::class, 'update'])->middleware('role:supervisor,admin,superadmin,owner');
  
         // Protected Admin/Supervisor Routes
-        Route::middleware('role:admin,supervisor,owner')->group(function () {
+        Route::middleware('role:admin,supervisor,superadmin,owner')->group(function () {
             Route::apiResource('terms', AcademicTermController::class);
             Route::apiResource('students', StudentController::class);
             Route::apiResource('teachers', TeacherController::class);
@@ -69,7 +69,7 @@ Route::middleware('tenant')->group(function() {
         });
  
         // Teacher/Supervisor/Admin/Owner Routes
-        Route::middleware('role:teacher,supervisor,admin,owner')->group(function () {
+        Route::middleware('role:teacher,supervisor,admin,superadmin,owner')->group(function () {
             Route::post('attendance', [AttendanceController::class, 'store']);
             Route::get('attendance/circle/{circleId}', [AttendanceController::class, 'getByCircle']);
             Route::get('reports/dashboard', [ReportsController::class, 'dashboardOverview']);
@@ -77,7 +77,7 @@ Route::middleware('tenant')->group(function() {
         });
  
         // General Reports (protected - admin/supervisor/owner only)
-        Route::middleware('role:admin,supervisor,owner')->group(function () {
+        Route::middleware('role:admin,supervisor,superadmin,owner')->group(function () {
             Route::get('reports/student/{id}', [ReportsController::class, 'studentReport']);
             Route::get('reports/circle/{id}', [ReportsController::class, 'circleReport']);
             Route::get('stats/attendance-chart', [StatsController::class, 'attendanceChart']);

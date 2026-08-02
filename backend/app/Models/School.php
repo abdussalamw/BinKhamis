@@ -49,7 +49,7 @@ class School extends Model
 
     public function supervisor()
     {
-        return $this->belongsTo(User::class, 'supervisor_id');
+        return $this->belongsTo(User::class, 'supervisor_id')->withoutGlobalScope('school');
     }
 
     public function circles()

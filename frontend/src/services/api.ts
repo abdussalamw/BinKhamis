@@ -36,9 +36,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !window.location.pathname.includes('/auth/signin')) {
+    if ((error.response?.status === 401 || error.response?.status === 403) && !window.location.pathname.includes('/auth/signin')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      delete api.defaults.headers.common['X-School-ID'];
       window.location.href = '/auth/signin';
     }
     return Promise.reject(error);

@@ -32,11 +32,16 @@ class TeacherController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|unique:users,phone',
+            'phone' => 'required|string',
             'email' => 'nullable|email|unique:users,email',
             'specialization' => 'nullable|string|max:100',
             'national_id' => 'nullable|string',
         ]);
+
+        // Phone protection for teacher role
+        if (User::where('phone', $validated['phone'])->where('role', 'teacher')->exists()) {
+            return response()->json(['message' => 'رقم الجوال مسجل بالفعل لمعلم آخر.'], 422);
+        }
 
         try {
             return DB::transaction(function () use ($validated) {

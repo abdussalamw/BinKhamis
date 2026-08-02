@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دليل نظام التصميم القياسي | حلقات برو (Design System)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            readex: ['Readex Pro', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#0d9488',
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+            },
+            secondary: '#fb7185',
+            accent: '#f59e0b',
+            midnight: '#0a0f1d',
+            mint: '#f6fcf9',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Readex Pro', sans-serif;
+      font-size: 14.5px;
+      background-color: #f6fcf9;
+      color: #0f172a;
+    }
+    .dark body {
+      background-color: #0a0f1d;
+      color: #f8fafc;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    }
+    .dark .glass-card {
+      background: rgba(15, 23, 42, 0.6);
+      border-color: rgba(255, 255, 255, 0.05);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body class="p-6 md:p-12 transition-colors duration-300">
+
+  <div class="max-w-6xl mx-auto space-y-12">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-slate-200 dark:border-slate-800">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 bg-teal-500/10 text-teal-600 dark:text-teal-400 rounded-full text-xs font-black mb-3">
+          DESIGN SYSTEM SPECIFICATION v2.0
+        </div>
+        <h1 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+          دليل الهوية البصرية ونظام التصميم القياسي (Design System)
+        </h1>
+        <p class="text-sm font-bold text-slate-500 dark:text-slate-400 mt-2">
+          المرجع الموحد الشامل للألوان، الخطوط، الأوزان، والأبعاد المصغرة في منصة <strong>حلقات برو</strong>
+        </p>
+      </div>
+
+      <button onclick="document.documentElement.classList.toggle('dark')" class="px-5 py-2.5 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-2xl font-black text-xs shadow-lg hover:scale-105 transition-all">
+        تبديل الوضع (فاتح / داكن) 🌓
+      </button>
+    </div>
+
+    <!-- Section 1: Typography System -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-8 bg-primary rounded-full"></div>
+        <h2 class="text-xl font-black text-slate-800 dark:text-white">1. نظام الخطوط والتسلسل الهرمي المصغر (Typography Scale)</h2>
+      </div>
+
+      <div class="glass-card rounded-3xl p-6 md:p-8 space-y-6">
+        <p class="text-xs font-bold text-slate-500">
+          نوع الخط الأساسي الداعم لكل التطبيق: <code class="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-primary">Readex Pro</code> من Google Fonts.
+        </p>
+
+        <!-- Typography Matrix -->
+        <div class="divide-y divide-slate-100 dark:divide-slate-800">
+          
+          <div class="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <span class="text-xs font-mono font-bold text-slate-400 w-32">Heading 1 (H1)</span>
+            <div class="flex-grow">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">عنوان رئيسي كبير - H1 (24px / 1.5rem)</span>
+            </div>
+            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">Weight: 900 Black</span>
+          </div>
+
+          <div class="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <span class="text-xs font-mono font-bold text-slate-400 w-32">Heading 2 (H2)</span>
+            <div class="flex-grow">
+              <span class="text-xl font-bold text-slate-900 dark:text-white">عنوان فرعي للقسم - H2 (20px / 1.25rem)</span>
+            </div>
+            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">Weight: 700 Bold</span>
+          </div>
+
+          <div class="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <span class="text-xs font-mono font-bold text-slate-400 w-32">Heading 3 (H3)</span>
+            <div class="flex-grow">
+              <span class="text-lg font-bold text-slate-800 dark:text-slate-100">عنوان الكارت أو الجدول - H3 (18px / 1.125rem)</span>
+            </div>
+            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">Weight: 700 Bold</span>
+          </div>
+
+          <div class="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <span class="text-xs font-mono font-bold text-slate-400 w-32">Body Regular</span>
+            <div class="flex-grow">
+              <span class="text-sm font-medium text-slate-700 dark:text-slate-300">النص الأساسي للفقرات والمحتوى (14.5px / Regular)</span>
+            </div>
+            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">Weight: 400 Regular</span>
+          </div>
+
+          <div class="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <span class="text-xs font-mono font-bold text-slate-400 w-32">Small / Subtitle</span>
+            <div class="flex-grow">
+              <span class="text-xs font-bold text-slate-500 dark:text-slate-400">النصوص الفرعية والمساعدات (12px / Medium)</span>
+            </div>
+            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">Weight: 500 Medium</span>
+          </div>
+
+          <div class="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <span class="text-xs font-mono font-bold text-slate-400 w-32">Micro Badge</span>
+            <div class="flex-grow">
+              <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">التسميات التوضيحية البسيطة (10px / Extra Black)</span>
+            </div>
+            <span class="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-xl">Weight: 900 Black</span>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Color Palette -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-8 bg-secondary rounded-full"></div>
+        <h2 class="text-xl font-black text-slate-800 dark:text-white">2. لوحة الألوان العالمية (Global Color Palette)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <!-- Primary Color -->
+        <div class="glass-card p-5 rounded-3xl space-y-3">
+          <div class="h-20 bg-teal-600 rounded-2xl flex items-end p-3 text-white font-mono font-bold text-xs shadow-md">
+            #0d9488 (Teal 600)
+          </div>
+          <div>
+            <h4 class="font-black text-slate-900 dark:text-white">اللون الأساسي (Primary)</h4>
+            <p class="text-xs font-bold text-slate-400 mt-1">يُستخدم في الأزرار الرئيسية، الهيدر، والأيقونات النشطة.</p>
+          </div>
+        </div>
+
+        <!-- Secondary Color -->
+        <div class="glass-card p-5 rounded-3xl space-y-3">
+          <div class="h-20 bg-rose-400 rounded-2xl flex items-end p-3 text-white font-mono font-bold text-xs shadow-md">
+            #fb7185 (Coral Rose)
+          </div>
+          <div>
+            <h4 class="font-black text-slate-900 dark:text-white">اللون الثانوي (Secondary)</h4>
+            <p class="text-xs font-bold text-slate-400 mt-1">يُستخدم للتأكيدات والإشارات الجمالية الفرعية.</p>
+          </div>
+        </div>
+
+        <!-- Accent Color -->
+        <div class="glass-card p-5 rounded-3xl space-y-3">
+          <div class="h-20 bg-amber-500 rounded-2xl flex items-end p-3 text-white font-mono font-bold text-xs shadow-md">
+            #f59e0b (Amber Warm)
+          </div>
+          <div>
+            <h4 class="font-black text-slate-900 dark:text-white">لون التنبيه (Accent / Warning)</h4>
+            <p class="text-xs font-bold text-slate-400 mt-1">يُستخدم في التنبيهات وإحداثيات الإحصاءات الممتازة.</p>
+          </div>
+        </div>
+
+        <!-- Midnight Neutral -->
+        <div class="glass-card p-5 rounded-3xl space-y-3">
+          <div class="h-20 bg-slate-900 rounded-2xl flex items-end p-3 text-white font-mono font-bold text-xs shadow-md border border-slate-800">
+            #0a0f1d (Midnight Dark)
+          </div>
+          <div>
+            <h4 class="font-black text-slate-900 dark:text-white">الخلفية الداكنة (Midnight)</h4>
+            <p class="text-xs font-bold text-slate-400 mt-1">خلفية الوضع الليلي الفاخرة للعين.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Semantic Colors -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+        <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-between">
+          <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">ناجح / نشط (Success)</span>
+          <span class="text-xs font-mono font-bold text-emerald-600">#10b981</span>
+        </div>
+        <div class="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-between">
+          <span class="text-xs font-black text-rose-600 dark:text-rose-400">خطأ / محذوف (Danger)</span>
+          <span class="text-xs font-mono font-bold text-rose-600">#ef4444</span>
+        </div>
+        <div class="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between">
+          <span class="text-xs font-black text-amber-600 dark:text-amber-400">تحذير / معلق (Warning)</span>
+          <span class="text-xs font-mono font-bold text-amber-600">#f59e0b</span>
+        </div>
+        <div class="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-between">
+          <span class="text-xs font-black text-indigo-600 dark:text-indigo-400">معلومات (Info)</span>
+          <span class="text-xs font-mono font-bold text-indigo-600">#3b82f6</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Component Specifications -->
+    <section class="space-y-6">
+      <div class="flex items-center gap-3">
+        <div class="w-3 h-8 bg-indigo-600 rounded-full"></div>
+        <h2 class="text-xl font-black text-slate-800 dark:text-white">3. مكوّنات النظام المصغّرة (Compact UI Components)</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        
+        <!-- Compact Buttons -->
+        <div class="glass-card p-6 rounded-3xl space-y-4">
+          <h3 class="text-base font-black text-slate-800 dark:text-white">الأزرار التفاعلية المصغرة (Buttons)</h3>
+          <div class="flex flex-wrap items-center gap-3 pt-2">
+            <button class="px-5 py-2.5 bg-teal-600 text-white rounded-xl font-black text-xs shadow-md shadow-teal-600/20 hover:scale-105 transition-all">
+              زر أساسي (Primary)
+            </button>
+            <button class="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-black text-xs hover:bg-slate-200 transition-all">
+              زر ثانوي (Neutral)
+            </button>
+            <button class="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-xl font-bold text-xs hover:bg-slate-50 transition-all">
+              زر محدد (Outline)
+            </button>
+          </div>
+        </div>
+
+        <!-- Form Elements -->
+        <div class="glass-card p-6 rounded-3xl space-y-4">
+          <h3 class="text-base font-black text-slate-800 dark:text-white">حقول المدخلات (Form Controls)</h3>
+          <div class="space-y-3">
+            <label class="block text-[10px] font-black uppercase text-slate-400">اسم المستخدم</label>
+            <input type="text" value="أحمد محمد" class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 px-4 py-2.5 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <div class="pt-8 border-t border-slate-200 dark:border-slate-800 text-center text-xs font-bold text-slate-400">
+      منصة حلقات برو التعليمية © 2026 - نظام التصميم الشامل والهوية البصرية الموحدة
+    </div>
+
+  </div>
+
+</body>
+</html>

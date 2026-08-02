@@ -82,7 +82,7 @@ class ReportsController extends Controller
         }
 
         // 3. Distribution
-        $programDistribution = DB::table('profiles')
+        $programDistribution = DB::table('student_profiles')
             ->select('memorization_method as name', DB::raw('count(*) as value'))
             ->whereNotNull('memorization_method')
             ->groupBy('memorization_method')

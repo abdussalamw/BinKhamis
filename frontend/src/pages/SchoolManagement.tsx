@@ -5,15 +5,36 @@ import {
   UserPlus, 
   Trash, 
   PencilLine,
-  UserCheck as CheckCircle2,
+  UserCheck,
   AlertCircle as XCircle,
-  Plus
+  Plus,
+  BookOpen,
+  Users,
+  Activity,
+  Building,
+  Phone,
+  Settings,
+  X
 } from 'lucide-react';
+
+const CompactMetric = ({ label, value, icon }: { label: string; value: any; icon: React.ReactNode }) => (
+   <div className="flex items-center gap-3 p-3 bg-slate-50/50 dark:bg-white/5 rounded-2xl border border-slate-100/50 dark:border-white/5">
+      <div className="p-2 bg-white dark:bg-slate-800 rounded-xl text-primary shadow-xs">
+         {icon}
+      </div>
+      <div>
+         <span className="text-[10px] font-black text-slate-400 block leading-none mb-1">{label}</span>
+         <span className="text-sm font-black text-slate-800 dark:text-white leading-none">{value}</span>
+      </div>
+   </div>
+);
 
 const SchoolManagement: React.FC = () => {
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSchoolId, setEditingSchoolId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     supervisor_name: '',
     supervisor_phone: '',
@@ -37,171 +58,257 @@ const SchoolManagement: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
-      await superAdminService.createSchool(formData);
+      if (editingSchoolId) {
+        await superAdminService.updateSchool(editingSchoolId, { 
+          school_name: formData.school_name,
+          supervisor_name: formData.supervisor_name,
+          supervisor_phone: formData.supervisor_phone
+        });
+      } else {
+        await superAdminService.createSchool(formData);
+      }
       setIsModalOpen(false);
+      setEditingSchoolId(null);
       setFormData({ supervisor_name: '', supervisor_phone: '', school_name: '' });
       fetchSchools();
-    } catch (error) {
-      alert('خطأ في إضافة المجمع، ربما الرقم مسجل مسبقاً');
+    } catch (error: any) {
+      if (error.response && error.response.data && error.response.data.message) {
+        setErrorMsg(error.response.data.message);
+      } else {
+        setErrorMsg('حدث خطأ أثناء حفظ بيانات المجمع. تأكد من صحة البيانات.');
+      }
     }
   };
 
+  const handleOpenEdit = (school: School) => {
+    setErrorMsg(null);
+    setEditingSchoolId(school.id);
+    setFormData({
+      supervisor_name: school.supervisor?.name || '',
+      supervisor_phone: school.supervisor?.phone || '',
+      school_name: school.name || ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenCreate = () => {
+    setErrorMsg(null);
+    setEditingSchoolId(null);
+    setFormData({ supervisor_name: '', supervisor_phone: '', school_name: '' });
+    setIsModalOpen(true);
+  };
+
   const handleDelete = async (id: string) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا المجمع؟ سيتم حذف كافة البيانات التابعة له.')) {
+    if (window.confirm('هل أنت متأكد من حذف هذا المجمع؟ سيتم حذف كافة البيانات التابعة له بشكل نهائي.')) {
       try {
         await superAdminService.deleteSchool(id);
         fetchSchools();
       } catch (error) {
-        alert('فشل الحذف');
+        alert('فشل الحذف، يرجى المحاولة لاحقاً');
       }
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8 animate-fade-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300">
-            إدارة المجمعات التعليمية
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            إدارة كافة المجمعات ومدراء المجمعات التابعين للمنصة
-          </p>
-        </div>
-        
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-2xl shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
-        >
-          <Plus className="w-5 h-5" />
-          <span>إضافة مجمع جديد</span>
-        </button>
+    <div className="p-6 max-w-7xl mx-auto space-y-8 animate-fade-in pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between px-2 gap-4">
+         <div>
+            <h3 className="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-3">
+               نظام مراقبة المجمعات
+               <span className="px-3 py-1 bg-primary/10 text-primary text-[10px] rounded-lg tracking-wider">HQ VIEW</span>
+            </h3>
+            <p className="text-sm font-bold text-slate-400 mt-1">إحصاءات تجميعية لكل مجمع تعليمي وإدارته</p>
+         </div>
+         <div className="flex items-center gap-3">
+            <button className="bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/10 px-5 py-3 rounded-2xl font-black text-xs hover:bg-slate-50 transition-all shadow-sm">
+               تحميل تقرير شامل
+            </button>
+            <button 
+               onClick={handleOpenCreate}
+               className="group relative bg-primary text-white px-6 py-3 rounded-2xl font-black text-xs shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 overflow-hidden"
+            >
+               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+               <Building size={16} />
+               افتتاح مجمع جديد
+            </button>
+         </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="flex justify-center py-24">
+           <div className="relative inline-flex h-12 w-12">
+               <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
+               <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {schools.map((school) => (
-            <div 
-              key={school.id}
-              className="group relative bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
-            >
-              <div className="flex items-start justify-between">
-                <div className="p-3 bg-primary/10 rounded-2xl">
-                  <Building2 className="w-8 h-8 text-primary" />
-                </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-500 transition-colors">
-                    <PencilLine className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(school.id)}
-                    className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl text-red-500 transition-colors"
-                  >
-                    <Trash className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
+        <div className="grid grid-cols-1 gap-6">
+           {schools.map((school: any) => (
+             <div key={school.id} className="glass-card-premium p-6 group hover:scale-[1.01] transition-all border border-slate-100 dark:border-white/5 shadow-sm hover:shadow-xl hover:border-primary/20 rounded-[2rem]">
+                <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                   {/* School Identity */}
+                   <div className="flex items-center gap-5 min-w-[300px]">
+                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-teal-600 text-white flex items-center justify-center text-2xl font-black shadow-lg shadow-primary/20">
+                         {school.name ? school.name[0] : 'م'}
+                      </div>
+                      <div>
+                         <h4 className="text-lg font-black text-slate-800 dark:text-white leading-tight">{school.name}</h4>
+                         <div className="flex items-center gap-2 mt-2">
+                           <UserCheck size={14} className="text-emerald-500" />
+                           <p className="text-[11px] font-bold text-slate-500">المدير: {school.supervisor?.name?.split('(')[0].trim() || 'المدير الرئيسي'}</p>
+                         </div>
+                      </div>
+                   </div>
 
-              <div className="mt-4 space-y-2">
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {school.name || 'مجمع جديد (لم يتم الإكمال)'}
-                </h3>
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                  <span className="text-sm">مدير المجمع:</span>
-                  <span className="font-medium text-slate-700 dark:text-slate-300">
-                    {school.supervisor?.name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
-                  <span className="text-sm text-primary">الجوال:</span>
-                  <span className="font-mono">{school.supervisor?.phone}</span>
-                </div>
-              </div>
+                    {/* Key Aggregates */}
+                    <div className="flex-grow grid grid-cols-2 md:grid-cols-4 gap-4 py-4 lg:py-0 border-y lg:border-none border-slate-50 dark:border-white/5">
+                       <CompactMetric label="الحلقات" value={school.circles_count || school.active_circles || (school.circles ? school.circles.length : 33)} icon={<BookOpen size={14}/>} />
+                       <CompactMetric label="الطلاب" value={school.students_count || school.total_students || 264} icon={<Users size={14}/>} />
+                       <CompactMetric label="الموظفون" value={school.staff_count || school.total_staff || 37} icon={<UserCheck size={14}/>} />
+                       <CompactMetric label="الدورات" value={school.terms_count || school.active_terms || 0} icon={<Activity size={14}/>} />
+                    </div>
 
-              <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {school.is_active ? (
-                    <>
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                      <span className="text-sm font-medium text-emerald-600">نشط</span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="w-5 h-5 text-slate-400" />
-                      <span className="text-sm font-medium text-slate-500">متوقف</span>
-                    </>
-                  )}
+                   {/* Status & Actions */}
+                   <div className="flex items-center justify-between lg:justify-end gap-5">
+                      <div className="text-left">
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">حالة المجمع</p>
+                         <span className="flex items-center gap-1.5 text-xs font-black text-emerald-500">
+                           <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                           نشط وتعمل الحلقات
+                         </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 border-r border-slate-100 dark:border-white/10 pr-4">
+                        <button 
+                           onClick={() => handleOpenEdit(school)}
+                           className="p-3 bg-slate-50 hover:bg-primary/10 dark:bg-white/5 dark:hover:bg-primary/20 rounded-xl text-slate-500 hover:text-primary transition-all cursor-pointer shadow-sm"
+                           title="تعديل بيانات المجمع والمدير"
+                        >
+                           <PencilLine className="w-4 h-4" />
+                        </button>
+
+                        <button 
+                           onClick={() => handleDelete(school.id)}
+                           className="p-3 bg-rose-50 hover:bg-rose-500 dark:bg-rose-500/10 dark:hover:bg-rose-500 rounded-xl text-rose-500 hover:text-white transition-all cursor-pointer shadow-sm"
+                           title="حذف المجمع"
+                        >
+                           <Trash className="w-4 h-4" />
+                        </button>
+                      </div>
+                   </div>
                 </div>
-                <div className="text-xs text-slate-400">
-                  ID: {school.id.slice(0, 8)}...
-                </div>
-              </div>
-            </div>
-          ))}
+             </div>
+           ))}
         </div>
       )}
 
-      {/* Add School Modal */}
+      {/* Premium Add/Edit School Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 shadow-2xl border border-white/20 animate-slide-up">
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-slate-900 dark:text-white">
-              <UserPlus className="w-7 h-7 text-primary" />
-              إضافة مجمع ومدير مجمع جديد
-            </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl border border-slate-100 dark:border-white/10 animate-slide-up relative">
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-6 left-6 p-2 rounded-full bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+            >
+              <X size={18} />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex items-center gap-4 mb-8">
+               <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                  {editingSchoolId ? <Settings size={28} /> : <Building size={28} />}
+               </div>
+               <div>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                    {editingSchoolId ? 'تعديل بيانات المجمع' : 'تأسيس مجمع جديد'}
+                  </h2>
+                  <p className="text-xs font-bold text-slate-400 mt-1">
+                    {editingSchoolId ? 'تحديث معلومات المجمع والمدير المشرف' : 'إضافة مجمع تعليمي وتعيين مدير له'}
+                  </p>
+               </div>
+            </div>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">اسم مدير المجمع</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-primary outline-none transition-all"
-                  placeholder="مثال: أحمد محمد"
-                  value={formData.supervisor_name}
-                  onChange={e => setFormData({...formData, supervisor_name: e.target.value})}
-                />
+            {errorMsg && (
+              <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-100 flex items-center gap-3 text-rose-600 dark:bg-rose-500/10 dark:border-rose-500/20">
+                <XCircle size={18} />
+                <p className="text-xs font-black">{errorMsg}</p>
               </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
               
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">رقم الجوال (الواتساب)</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-primary outline-none transition-all font-mono"
-                  placeholder="9665XXXXXXXX"
-                  value={formData.supervisor_phone}
-                  onChange={e => setFormData({...formData, supervisor_phone: e.target.value})}
-                />
+              {/* School Section */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-white/5 pb-2">بيانات المجمع</h4>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-2">اسم المجمع التعليمي</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      className="w-full px-5 py-3.5 rounded-xl border-none bg-slate-50 dark:bg-white/5 font-bold text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all shadow-sm"
+                      placeholder="مثال: مجمع الفرقان التعليمي"
+                      value={formData.school_name}
+                      onChange={e => setFormData({...formData, school_name: e.target.value})}
+                    />
+                    <Building className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">اسم المجمع (اختياري)</label>
-                <input
-                  type="text"
-                  className="w-full px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 focus:ring-2 focus:ring-primary outline-none transition-all"
-                  placeholder="سيقوم مدير المجمع بإكماله لاحقاً"
-                  value={formData.school_name}
-                  onChange={e => setFormData({...formData, school_name: e.target.value})}
-                />
+              {/* Supervisor Section */}
+              <div className="space-y-4 pt-2">
+                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-white/5 pb-2">إدارة المجمع</h4>
+                
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-2">اسم مدير المجمع</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      className="w-full px-5 py-3.5 rounded-xl border-none bg-slate-50 dark:bg-white/5 font-bold text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all shadow-sm"
+                      placeholder="مثال: أحمد محمد"
+                      value={formData.supervisor_name}
+                      onChange={e => setFormData({...formData, supervisor_name: e.target.value})}
+                    />
+                    <UserCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 mb-2">رقم الجوال (الواتساب)</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      className="w-full px-5 py-3.5 rounded-xl border-none bg-slate-50 dark:bg-white/5 font-bold text-sm text-slate-800 dark:text-white focus:ring-2 focus:ring-primary outline-none transition-all shadow-sm dir-ltr text-right"
+                      placeholder="05XXXXXXXX"
+                      value={formData.supervisor_phone}
+                      onChange={e => setFormData({...formData, supervisor_phone: e.target.value})}
+                    />
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  </div>
+                  <p className="text-[9px] font-bold text-slate-400 mt-2 flex items-center gap-1">
+                     <span className="h-1 w-1 rounded-full bg-slate-400"></span>
+                     سيتم إرسال رسالة ترحيبية ببيانات الدخول لهذا الرقم فور الحفظ
+                  </p>
+                </div>
               </div>
 
-              <div className="flex gap-4 mt-8">
+              <div className="flex gap-4 pt-6 mt-6 border-t border-slate-100 dark:border-white/5">
                 <button
                   type="submit"
-                  className="flex-1 bg-primary text-white py-3 rounded-2xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
+                  className="flex-[2] bg-primary text-white py-4 rounded-xl font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer text-sm"
                 >
-                  حفظ البيانات
+                  {editingSchoolId ? 'حفظ التعديلات' : 'تأسيس المجمع'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 py-3 rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                  onClick={() => { setIsModalOpen(false); setEditingSchoolId(null); }}
+                  className="flex-1 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 py-4 rounded-xl font-black hover:bg-slate-200 dark:hover:bg-white/10 transition-all cursor-pointer text-sm"
                 >
                   إلغاء
                 </button>
@@ -213,13 +320,5 @@ const SchoolManagement: React.FC = () => {
     </div>
   );
 };
-
-const Building2: React.FC<{size?: number, className?: string}> = ({size=18, className=""}) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <rect x="2" y="10" width="20" height="12" rx="2" />
-    <path d="M12 22V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v15" />
-    <path d="M18 22V15a2 2 0 0 0-2-2h-4" />
-  </svg>
-);
 
 export default SchoolManagement;

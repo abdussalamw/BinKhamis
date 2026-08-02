@@ -32,10 +32,10 @@ return [
     'connections' => [
  
         'central' => [
-            'driver' => 'pgsql',
+            'driver' => env('DB_CONNECTION', 'sqlite'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'laravel'),
+            'database' => env('DB_DATABASE', database_path('database.sqlite')),
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),
             'charset' => 'utf8',
@@ -46,10 +46,10 @@ return [
         ],
  
         'tenant' => [
-            'driver' => 'pgsql',
+            'driver' => env('DB_CONNECTION', 'sqlite'),
             'host' => env('DB_HOST', '127.0.0.1'),
             'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'qcms_db'), // Same database
+            'database' => env('DB_DATABASE', database_path('database.sqlite')), // Same database
             'username' => env('DB_USERNAME', 'root'),
             'password' => env('DB_PASSWORD', ''),
             'charset' => 'utf8',

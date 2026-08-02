@@ -75,8 +75,38 @@ class AuthController extends Controller
         if ($phone !== 'supervisor') {
             $phone = preg_replace('/[^0-9]/', '', $phone);
         }
-        // Auth scope bypass: BelongsToSchool returns WHERE 1=0 when no auth user exists
-        $user = User::withoutGlobalScope('school')->where('phone', $phone)->first();
+        $role = $request->input('role');
+        
+        $query = User::withoutGlobalScope('school')->where('phone', $phone);
+        if ($role) {
+            $query->where('role', $role);
+        }
+        
+        $users = $query->get();
+
+        // If multiple matching users exist and no role specified, return user choices (unique by role & school_id)
+        $uniqueAccounts = $users->unique(function ($u) {
+            return $u->role . '_' . ($u->school_id ?? 'central');
+        });
+
+        if ($uniqueAccounts->count() > 1 && !$role) {
+            $accounts = $uniqueAccounts->map(function ($u) {
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'role' => $u->role,
+                    'school_id' => $u->school_id,
+                ];
+            })->values();
+            return response()->json([
+                'success' => false,
+                'multiple_accounts' => true,
+                'message' => 'تم العثور على أكثر من حساب برقم الجوال هذا، اختر الحساب المطلوب للدخول.',
+                'accounts' => $accounts
+            ], 200);
+        }
+
+        $user = $users->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             // L1: Log failed login attempt

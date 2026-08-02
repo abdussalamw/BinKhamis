@@ -43,7 +43,9 @@ class DatabaseSeeder extends Seeder
 
             // Create Teacher if not exists
             if (!isset($teachers[$teacherName]) && $teacherName !== 'nan') {
+                $teacherId = (string) Str::uuid();
                 $teacherUser = User::create([
+                    'id' => $teacherId,
                     'name' => $teacherName,
                     'phone' => 'T-' . Str::random(8), // Placeholder phone
                     'password' => Hash::make('password'),
@@ -52,6 +54,7 @@ class DatabaseSeeder extends Seeder
                 ]);
 
                 $teacherUser->profile()->create([
+                    'id' => (string) Str::uuid(),
                     'type' => 'teacher',
                     'gender' => 'M',
                 ]);
@@ -59,20 +62,26 @@ class DatabaseSeeder extends Seeder
                 $teachers[$teacherName] = $teacherUser;
 
                 // Create Circle for this teacher
-                $circle = Circle::create([
+                $circleId = (string) Str::uuid();
+                \Illuminate\Support\Facades\DB::table('circles')->insert([
+                    'id' => $circleId,
                     'name' => $circleName,
                     'description' => 'حلقة تعليم القرآن الكريم',
                     'location' => 'المسجد',
-                    'schedule' => ['days' => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'], 'time' => '16:00'],
+                    'schedule' => json_encode(['days' => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'], 'time' => '16:00']),
                     'capacity' => 20,
-                    'teacher_id' => $teacherUser->id,
+                    'teacher_id' => $teacherId,
                     'is_active' => true,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
-                $circles[$teacherName] = $circle;
+                $circles[$teacherName] = $circleId;
             }
 
             // Create Student
+            $studentId = (string) Str::uuid();
             $studentUser = User::create([
+                'id' => $studentId,
                 'name' => $studentName,
                 'phone' => 'S-' . Str::random(8), // Placeholder phone
                 'password' => Hash::make('password'),
@@ -81,20 +90,34 @@ class DatabaseSeeder extends Seeder
             ]);
 
             $studentUser->profile()->create([
+                'id' => (string) Str::uuid(),
                 'type' => 'student',
                 'gender' => 'M',
             ]);
 
             // Enroll in circle
             if (isset($circles[$teacherName])) {
-                $studentUser->enrollments()->create([
-                    'circle_id' => $circles[$teacherName]->id,
+                \Illuminate\Support\Facades\DB::table('enrollments')->insert([
+                    'id' => (string) Str::uuid(),
+                    'student_id' => $studentId,
+                    'circle_id' => $circles[$teacherName],
                     'enrolled_at' => now(),
                     'status' => 'active',
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         }
 
-        $this->command->info("Seeded " . count($studentsData) . " entries from Excel.");
+        // Seed Main School
+        $school = \App\Models\School::create([
+            'name' => 'مجمع بن خميس المطور',
+            'is_active' => true
+        ]);
+
+        \App\Models\User::withoutGlobalScope('school')->whereNull('school_id')->where('role', '!=', 'owner')->update(['school_id' => $school->id]);
+        \App\Models\Circle::withoutGlobalScope('school')->whereNull('school_id')->update(['school_id' => $school->id]);
+
+        $this->command->info("Seeded " . count($studentsData) . " entries from Excel and created school {$school->name}.");
     }
 }

@@ -12,6 +12,7 @@ class Circle extends Model
     use HasFactory, SoftDeletes, BelongsToSchool;
 
     protected $fillable = [
+        'id',
         'name',
         'teacher_id',
         'description',

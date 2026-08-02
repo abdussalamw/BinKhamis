@@ -19,9 +19,6 @@ class IdentifyTenant
         
         if ($schoolId) {
             $this->switchToTenant($schoolId);
-        } else {
-            // Default to central for routes that don't specify a tenant
-            Config::set('database.default', 'central');
         }
  
         return $next($request);

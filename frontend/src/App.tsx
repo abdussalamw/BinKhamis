@@ -20,6 +20,7 @@ import SystemSettings from './pages/SystemSettings';
 import SchoolManagement from './pages/SchoolManagement';
 import SchoolSettings from './pages/SchoolSettings';
 import WhatsAppSettings from './pages/WhatsAppSettings';
+
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -57,14 +58,14 @@ function App() {
           <Route path="/students/:id" element={<StudentProfile />} />
           
           {/* Owner Only */}
-          <Route element={<ProtectedRoute allowedRoles={['owner']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['superadmin', 'owner']} />}>
             <Route path="/system-settings" element={<SystemSettings />} />
             <Route path="/schools" element={<SchoolManagement />} />
             <Route path="/whatsapp" element={<WhatsAppSettings />} />
           </Route>
 
           {/* Admin, Supervisor & Owner */}
-          <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'owner']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'superadmin', 'owner']} />}>
             <Route path="/students" element={<StudentList />} />
             <Route path="/students/new" element={<StudentForm />} />
             <Route path="/students/:id/edit" element={<StudentForm />} />
@@ -76,7 +77,7 @@ function App() {
           </Route>
 
           {/* Teacher, Supervisor, Admin & Owner */}
-          <Route element={<ProtectedRoute allowedRoles={['teacher', 'supervisor', 'admin', 'owner']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['teacher', 'supervisor', 'admin', 'superadmin', 'owner']} />}>
             <Route path="/attendance" element={<AttendanceBoard />} />
             <Route path="/progress" element={<ProgressTracking />} />
             <Route path="/reports" element={<Reports />} />

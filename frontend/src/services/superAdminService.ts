@@ -7,6 +7,7 @@ export interface School {
   email: string;
   address: string;
   is_active: boolean;
+  supervisor_id?: string;
   supervisor?: {
     id: string;
     name: string;
@@ -25,7 +26,7 @@ const superAdminService = {
     return response.data;
   },
   
-  updateSchool: async (id: string, data: Partial<School>) => {
+  updateSchool: async (id: string, data: any) => {
     const response = await api.put(`/super-admin/schools/${id}`, data);
     return response.data;
   },

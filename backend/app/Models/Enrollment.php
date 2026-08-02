@@ -11,6 +11,7 @@ class Enrollment extends Model
     use HasFactory, BelongsToSchool;
 
     protected $fillable = [
+        'id',
         'student_id',
         'circle_id',
         'enrolled_at',

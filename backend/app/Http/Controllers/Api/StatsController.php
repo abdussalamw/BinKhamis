@@ -104,9 +104,8 @@ class StatsController extends Controller
             ];
         });
 
-        // 2. Distribution by Academic Stage (from the newly added Excel fields)
-        $stageDistribution = Profile::where('type', 'student')
-            ->whereNotNull('academic_stage')
+        // 2. Distribution by Academic Stage
+        $stageDistribution = \App\Models\StudentProfile::whereNotNull('academic_stage')
             ->select('academic_stage as name', DB::raw('count(*) as value'))
             ->groupBy('academic_stage')
             ->get();

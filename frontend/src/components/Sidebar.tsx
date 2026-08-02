@@ -30,14 +30,13 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const role = user?.role || 'student';
 
   const menuItems = [
-    { title: 'لوحة التحكم', icon: LayoutDashboard, path: '/', roles: ['owner', 'admin', 'supervisor', 'teacher', 'student'] },
+    { title: 'لوحة التحكم', icon: LayoutDashboard, path: '/', roles: ['superadmin', 'owner', 'admin', 'supervisor', 'teacher', 'student'] },
     
     // Owner specific - Focus on platform growth
-    { title: 'إدارة المجمعات', icon: Building, path: '/schools', roles: ['owner'] },
-    { title: 'إدارة مدراء المجمعات', icon: Shield, path: '/staff', roles: ['owner'] },
-    { title: 'ربط الواتساب', icon: MessageSquare, path: '/whatsapp', roles: ['owner'] },
-    { title: 'إحصائيات المنصة', icon: BarChart, path: '/reports', roles: ['owner'] },
-    { title: 'إعدادات النظام', icon: SettingsIcon, path: '/system-settings', roles: ['owner'] },
+    { title: 'إدارة المجمعات', icon: Building, path: '/schools', roles: ['superadmin', 'owner'] },
+    { title: 'إدارة مدراء المجمعات', icon: Shield, path: '/staff', roles: ['superadmin', 'owner'] },
+    { title: 'ربط الواتساب', icon: MessageSquare, path: '/whatsapp', roles: ['superadmin', 'owner'] },
+    { title: 'إعدادات النظام', icon: SettingsIcon, path: '/system-settings', roles: ['superadmin', 'owner'] },
     
     // Management (Supervisor & Admin) - Focus on operations
     { title: 'إدارة الطلاب والقبول', icon: Users, path: '/students', roles: ['admin', 'supervisor'] },

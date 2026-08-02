@@ -45,17 +45,13 @@ const StaffList: React.FC = () => {
       
       // Role-based filtering logic
       if (viewerRole === 'owner') {
-        // Owner only manages General Supervisors
         data = data.filter((s: StaffData) => s.role === 'supervisor');
       } else if (viewerRole === 'supervisor') {
-        // General Supervisor can see admins, teachers, and managers
         data = data.filter((s: StaffData) => s.role !== 'supervisor' || s.id === user.id);
       } else if (viewerRole === 'admin') {
-        // System Manager can only see teachers and managers (circle supervisors)
         data = data.filter((s: StaffData) => s.role === 'teacher' || s.role === 'manager');
       }
       
-      // Map staff members to ensure consistent profile object
       const mappedData = data.map((s: any) => ({
         ...s,
         profile: s.teacher_profile || s.active_profile || s.profile || {}
@@ -90,51 +86,51 @@ const StaffList: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+    <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       {/* Header Section */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-600">
-            <Shield size={28} />
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <Shield size={20} />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white">إدارة الكوادر البشرية</h1>
-            <p className="text-sm font-bold text-slate-400">المعلمين والإداريين والمشرفين ({filteredStaff.length} عضو)</p>
+            <h1 className="text-lg font-black text-slate-800 dark:text-white">إدارة الكوادر البشرية</h1>
+            <p className="text-xs font-bold text-slate-400">المعلمين والإداريين والمشرفين ({filteredStaff.length} عضو)</p>
           </div>
         </div>
         
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-5 py-3 font-bold text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 transition-all">
-            <FileDown size={18} />
+          <button className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-4 py-2 font-bold text-xs text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 transition-all">
+            <FileDown size={14} />
             تصدير البيانات
           </button>
           <button 
             onClick={() => navigate('/staff/new')}
-            className="flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 font-black text-white shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2 font-black text-xs text-white shadow-sm transition-all hover:scale-[1.02] active:scale-95"
           >
-            <UserPlus size={18} />
+            <UserPlus size={14} />
             إضافة عضو
           </button>
         </div>
       </div>
 
       {/* Search & Filters */}
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-grow max-w-xl">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-grow max-w-lg">
           <input
             type="text"
             placeholder="بحث بالاسم أو الجوال..."
-            className="w-full rounded-2xl border-none bg-white dark:bg-slate-900 py-4 pr-12 pl-6 font-bold text-slate-700 dark:text-slate-200 outline-none ring-1 ring-slate-200 dark:ring-slate-800 focus:ring-2 focus:ring-indigo-600/20 transition-all shadow-sm"
+            className="w-full rounded-xl border-none bg-white dark:bg-slate-900 py-2.5 pr-10 pl-4 font-bold text-xs text-slate-700 dark:text-slate-200 outline-none ring-1 ring-slate-200 dark:ring-slate-800 focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
         </div>
         
-        <div className="flex items-center gap-3 bg-white dark:bg-slate-900 px-4 py-2 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
-          <Filter size={16} className="text-slate-400" />
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <Filter size={14} className="text-slate-400" />
           <select 
-            className="bg-transparent border-none outline-none font-bold text-sm text-slate-600 dark:text-slate-400 cursor-pointer"
+            className="bg-transparent border-none outline-none font-bold text-[10px] text-slate-600 dark:text-slate-400 cursor-pointer"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
@@ -148,95 +144,95 @@ const StaffList: React.FC = () => {
       </div>
 
       {/* Enhanced Staff Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
-                <th className="py-5 px-8 font-black text-slate-500 uppercase text-[10px] tracking-widest">العضو والوظيفة</th>
-                <th className="py-5 px-8 font-black text-slate-500 uppercase text-[10px] tracking-widest">معلومات التواصل</th>
-                <th className="py-5 px-8 font-black text-slate-500 uppercase text-[10px] tracking-widest">رقم الحساب البنكي</th>
-                <th className="py-5 px-8 font-black text-slate-500 uppercase text-[10px] tracking-widest text-center">الحالة</th>
-                <th className="py-5 px-8 font-black text-slate-500 uppercase text-[10px] tracking-widest text-left">الإجراءات</th>
+                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider">العضو والوظيفة</th>
+                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider">معلومات التواصل</th>
+                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider">رقم الحساب البنكي</th>
+                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider text-center">الحالة</th>
+                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider text-left">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-32 text-center">
-                    <div className="inline-block h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                  <td colSpan={5} className="py-20 text-center">
+                    <div className="inline-block h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                   </td>
                 </tr>
               ) : filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-32 text-center font-black text-slate-400">لا يوجد بيانات للعرض</td>
+                  <td colSpan={5} className="py-20 text-center font-black text-xs text-slate-400">لا يوجد بيانات للعرض</td>
                 </tr>
               ) : (
                 filteredStaff.map((member) => (
                   <tr key={member.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                    <td className="py-4 px-8">
-                      <div className="flex items-center gap-4">
-                        <div className={`h-12 w-12 rounded-2xl flex items-center justify-center font-black text-lg transition-all ${member.is_active ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${member.is_active ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-400'}`}>
                             {(member.name || '?').charAt(0)}
                         </div>
                         <div>
-                            <h5 className={`font-black text-base leading-tight ${member.is_active ? 'text-slate-800 dark:text-white' : 'text-slate-400'}`}>{member.name}</h5>
-                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter">
+                            <h5 className={`font-black text-xs leading-tight ${member.is_active ? 'text-slate-800 dark:text-white' : 'text-slate-400'}`}>{member.name}</h5>
+                            <span className="text-[9px] font-bold text-primary uppercase tracking-wider">
                                 {member.role === 'teacher' ? 'معلم حلقة' : member.role === 'admin' ? 'مدير الشؤون الإدارية' : member.role === 'supervisor' ? 'مدير المجمع' : 'مشرف تعليمي'}
                             </span>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-8">
-                      <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300">
-                          <Phone size={14} className="text-slate-400" />
+                    <td className="py-3 px-5">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                          <Phone size={12} className="text-slate-400" />
                           {member.phone}
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400">
-                          <Mail size={14} className="text-slate-300" />
+                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400">
+                          <Mail size={12} className="text-slate-300" />
                           {member.email}
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-8">
-                      <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 w-fit">
-                        <CreditCard size={16} className="text-indigo-400" />
-                        <span className="font-mono font-black text-slate-700 dark:text-slate-300 text-sm">
+                    <td className="py-3 px-5">
+                      <div className="flex items-center gap-2 p-1.5 px-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 w-fit">
+                        <CreditCard size={12} className="text-primary/70" />
+                        <span className="font-mono font-black text-slate-700 dark:text-slate-300 text-[10px]">
                           {member.profile?.bank_account_number || 'غير مسجل'}
                         </span>
                       </div>
                     </td>
-                    <td className="py-4 px-8 text-center">
+                    <td className="py-3 px-5 text-center">
                       <button 
                         onClick={() => toggleStatus(member)}
-                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black transition-all ${
                           member.is_active 
                           ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' 
                           : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20'
                         }`}
                       >
-                        {member.is_active ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                        {member.is_active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
                         {member.is_active ? 'نشط حالياً' : 'غير نشط'}
                       </button>
                     </td>
-                    <td className="py-4 px-8 text-left">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-3 rounded-xl bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all dark:bg-slate-800">
-                            <Eye size={18} />
+                    <td className="py-3 px-5 text-left">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-primary hover:text-white transition-all dark:bg-slate-800">
+                            <Eye size={14} />
                         </button>
                         <button 
                           onClick={() => navigate(`/staff/${member.id}/edit`)}
-                          className="p-3 rounded-xl bg-slate-50 text-slate-400 hover:bg-amber-500 hover:text-white transition-all dark:bg-slate-800"
+                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-500 hover:text-white transition-all dark:bg-slate-800"
                         >
-                            <Edit size={18} />
+                            <Edit size={14} />
                         </button>
                         <button 
                           onClick={() => toggleStatus(member)}
-                          className={`p-3 rounded-xl bg-slate-50 transition-all dark:bg-slate-800 ${member.is_active ? 'text-rose-500 hover:bg-rose-500 hover:text-white' : 'text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
+                          className={`p-2 rounded-lg bg-slate-50 transition-all dark:bg-slate-800 ${member.is_active ? 'text-rose-500 hover:bg-rose-500 hover:text-white' : 'text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
                           title={member.is_active ? 'تعطيل الحساب' : 'تنشيط الحساب'}
                         >
-                             {member.is_active ? <Power size={18} className="opacity-50" /> : <Power size={18} />}
+                             {member.is_active ? <Power size={14} className="opacity-50" /> : <Power size={14} />}
                         </button>
                       </div>
                     </td>

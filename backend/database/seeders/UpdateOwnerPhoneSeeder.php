@@ -10,7 +10,7 @@ class UpdateOwnerPhoneSeeder extends Seeder
 {
     public function run()
     {
-        $phone = '966544592410';
+        $phone = '0544592410';
         $owner = DB::connection('central')->table('users')->where('role', 'owner')->first();
         
         if ($owner) {
@@ -22,7 +22,7 @@ class UpdateOwnerPhoneSeeder extends Seeder
         } else {
             DB::connection('central')->table('users')->insert([
                 'id' => \Illuminate\Support\Str::uuid(),
-                'name' => 'المالك المشرف العام',
+                'name' => 'superadmin',
                 'phone' => $phone,
                 'password' => Hash::make('123456'),
                 'role' => 'owner',

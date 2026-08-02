@@ -38,25 +38,7 @@ class ApiTokenMiddleware
 
         $hashedToken = hash('sha256', $token);
         
-        // 1. Try to find user in central DB (for Super Admins/Owners)
-        $user = \DB::connection('central')->table('users')
-            ->where('api_token', $hashedToken)
-            ->first();
-
-        if ($user) {
-            // Re-map the user to an Eloquent model
-            $userModel = User::on('central')->withoutGlobalScope('school')->find($user->id);
-            if ($userModel && $userModel->role === 'owner') {
-                auth()->login($userModel);
-                $request->setUserResolver(function () use ($userModel) {
-                    return $userModel;
-                });
-                return $next($request);
-            }
-        }
-
-        // 2. If not found in central (or not an owner), check the current default connection (Tenant)
-        // Auth scope bypass: BelongsToSchool returns WHERE 1=0 when no auth user exists yet
+        // Try to find user using default connection
         $userModel = User::withoutGlobalScope('school')->where('api_token', $hashedToken)->first();
 
         if (!$userModel) {
@@ -80,18 +62,20 @@ class ApiTokenMiddleware
 
         // CRITICAL FIX C2: Verify X-School-ID matches the user's school_id
         $requestSchoolId = $request->header('X-School-ID');
-        if ($requestSchoolId && $userModel->school_id && $userModel->school_id !== $requestSchoolId) {
-            \Log::warning('ApiTokenMiddleware: School ID mismatch', [
-                'user_id' => $userModel->id,
-                'user_school_id' => $userModel->school_id,
-                'request_school_id' => $requestSchoolId
-            ]);
-            $this->securityLog->log($userModel, 'school_id_mismatch', [
-                'user_school_id' => $userModel->school_id,
-                'request_school_id' => $requestSchoolId,
-                'ip' => $request->ip(),
-            ]);
-            return response()->json(['message' => 'Unauthorized: School access denied'], 403);
+        if ($userModel->role !== 'owner') {
+            if ($userModel->school_id && $requestSchoolId && $userModel->school_id !== $requestSchoolId) {
+                \Log::warning('ApiTokenMiddleware: School ID mismatch', [
+                    'user_id' => $userModel->id,
+                    'user_school_id' => $userModel->school_id,
+                    'request_school_id' => $requestSchoolId
+                ]);
+                $this->securityLog->log($userModel, 'school_id_mismatch', [
+                    'user_school_id' => $userModel->school_id,
+                    'request_school_id' => $requestSchoolId,
+                    'ip' => $request->ip(),
+                ]);
+                return response()->json(['message' => 'Unauthorized: School access denied'], 403);
+            }
         }
 
         // CRITICAL FIX C1: Log in the user for tenant users

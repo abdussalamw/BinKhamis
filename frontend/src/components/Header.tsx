@@ -36,7 +36,16 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
     }
+    window.dispatchEvent(new Event('themeChangedHeader'));
   }, [isDarkMode]);
+
+  useEffect(() => {
+    const handleThemeSync = () => {
+      setIsDarkMode(localStorage.getItem('theme') === 'dark');
+    };
+    window.addEventListener('themeChangedSettings', handleThemeSync);
+    return () => window.removeEventListener('themeChangedSettings', handleThemeSync);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -90,7 +99,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
                   {user?.name?.split('(')[0].trim() || 'مستخدم'}
                 </p>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                  {role === 'owner' ? 'رئيس المنصة' : (role === 'supervisor' ? 'مدير المجمع' : (role === 'admin' ? 'مدير الشؤون الإدارية' : (role === 'manager' ? 'مشرف تعليمي' : (role === 'teacher' ? 'معلم حلقة' : role))))}
+                  {role === 'superadmin' || role === 'owner' ? 'رئيس المنصة' : (role === 'supervisor' ? 'مدير المجمع' : (role === 'admin' ? 'مدير الشؤون الإدارية' : (role === 'manager' ? 'مشرف تعليمي' : (role === 'teacher' ? 'معلم حلقة' : role))))}
                 </p>
               </div>
               
@@ -116,7 +125,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
                       {user?.name?.split('(')[0].trim()}
                     </p>
                     <p className="text-[10px] font-bold text-slate-400">
-                      {role === 'owner' ? 'رئيس المنصة' : (role === 'supervisor' ? 'مدير المجمع' : (role === 'admin' ? 'مدير الشؤون الإدارية' : (role === 'manager' ? 'مشرف تعليمي' : (role === 'teacher' ? 'معلم حلقة' : role))))}
+                      {role === 'superadmin' || role === 'owner' ? 'رئيس المنصة' : (role === 'supervisor' ? 'مدير المجمع' : (role === 'admin' ? 'مدير الشؤون الإدارية' : (role === 'manager' ? 'مشرف تعليمي' : (role === 'teacher' ? 'معلم حلقة' : role))))}
                     </p>
                   </div>
 
@@ -140,7 +149,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
                       className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-primary/5 hover:text-primary transition-all"
                     >
                       <SettingsIcon size={16} />
-                      {role === 'admin' || role === 'supervisor' || role === 'owner' ? 'إعدادات النظام' : 'إعدادات الحساب'}
+                      إعدادات الحساب
                     </Link>
 
                     <div className="my-1 border-t border-slate-100 dark:border-white/5"></div>

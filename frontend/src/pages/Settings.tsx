@@ -5,7 +5,7 @@ import {
 import api from '../services/api';
 
 const Settings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('whatsapp');
+  const [activeTab, setActiveTab] = useState('security');
   const [loading, setLoading] = useState(false);
   const [waStatus, setWaStatus] = useState<any>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -151,12 +151,11 @@ const Settings: React.FC = () => {
   const role = user?.role || 'student';
 
   const allTabs = [
-    { id: 'general', title: 'عام', icon: SettingsIcon, roles: ['owner', 'supervisor', 'admin'] },
-    { id: 'whatsapp', title: 'الواتساب', icon: Smartphone, roles: ['owner', 'supervisor', 'admin'] },
-    { id: 'import', title: 'استيراد البيانات', icon: Upload, roles: ['owner', 'supervisor', 'admin'] },
-    { id: 'notifications', title: 'التنبيهات', icon: Bell, roles: ['owner', 'supervisor', 'admin'] },
-    {id: 'security', title: 'الأمان', icon: Shield, roles: ['owner', 'supervisor', 'admin', 'manager', 'teacher', 'student']},
-    { id: 'backup', title: 'النسخ الاحتياطي', icon: Database, roles: ['owner', 'supervisor', 'admin'] },
+    { id: 'general', title: 'إعدادات المجمع', icon: SettingsIcon, roles: ['supervisor', 'admin'] },
+    { id: 'import', title: 'استيراد البيانات', icon: Upload, roles: ['supervisor', 'admin'] },
+    { id: 'notifications', title: 'تنبيهات الطلاب', icon: Bell, roles: ['supervisor', 'admin'] },
+    {id: 'security', title: 'الأمان', icon: Shield, roles: ['owner', 'superadmin', 'supervisor', 'admin', 'manager', 'teacher', 'student']},
+    { id: 'backup', title: 'النسخ الاحتياطي', icon: Database, roles: ['supervisor', 'admin'] },
   ];
 
   const tabs = allTabs.filter(tab => tab.roles.includes(role));
@@ -308,159 +307,6 @@ const Settings: React.FC = () => {
               </div>
             )}
 
-            {/* WhatsApp Tab */}
-            {activeTab === 'whatsapp' && (
-              <div className="space-y-6 animate-in slide-in-from-left duration-400">
-                <div className="flex items-center justify-between border-b border-slate-50 dark:border-slate-800 pb-4">
-                  <div className="flex items-center gap-2">
-                    <Smartphone size={18} className="text-emerald-500" />
-                    <h3 className="font-black text-sm text-slate-800 dark:text-white uppercase tracking-wider">بوابة الواتساب (Evolution API)</h3>
-                  </div>
-                  <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black ${
-                    waStatus?.state?.instance?.state === 'open' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'
-                  }`}>
-                    <div className={`h-1.5 w-1.5 rounded-full ${waStatus?.state?.instance?.state === 'open' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></div>
-                    {waStatus?.state?.instance?.state === 'open' ? 'الجلسة نشطة ومتصلة' : 'بانتظار الربط'}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">اسم الجلسة</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">{waStatus?.instance?.instance?.instanceName || 'hpro'}</span>
-                      <History size={14} className="text-primary" />
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">الرقم المتصل</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-200" dir="ltr">{waStatus?.instance?.instance?.owner?.split('@')[0] || '----'}</span>
-                      <CheckCircle2 size={14} className="text-emerald-500" />
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">نوع الربط</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">Multi-Device</span>
-                      <Smartphone size={14} className="text-indigo-500" />
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">الحالة التقنية</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-700 dark:text-slate-200">{waStatus?.state?.instance?.state || 'unknown'}</span>
-                      <div className={`h-2 w-2 rounded-full ${waStatus?.state?.instance?.state === 'open' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="p-8 rounded-[2.5rem] bg-white dark:bg-slate-800/40 border border-slate-100 dark:border-white/5 flex flex-col items-center text-center space-y-6">
-                    <div className="relative">
-                      <div className={`h-24 w-24 rounded-[2rem] bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-primary shadow-inner`}>
-                        {waStatus?.state?.instance?.state === 'open' ? (
-                          <div className="relative">
-                             <img src={`https://ui-avatars.com/api/?name=${waStatus?.instance?.instance?.owner?.split('@')[0] || 'WA'}&background=6366f1&color=fff`} className="h-20 w-20 rounded-[1.5rem]" alt="WA" />
-                             <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-emerald-500 rounded-lg border-4 border-white dark:border-slate-800 flex items-center justify-center">
-                               <div className="h-2 w-2 bg-white rounded-full animate-pulse" />
-                             </div>
-                          </div>
-                        ) : (
-                          qrCode ? (
-                            <img src={qrCode} className="h-20 w-20 rounded-lg" alt="QR Code" />
-                          ) : (
-                            <QrCode size={40} className="text-slate-200" />
-                          )
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="text-base font-black text-slate-800 dark:text-white">حالة الاتصال الفوري</h4>
-                      <p className="text-[11px] font-bold text-slate-500 max-w-[280px] mx-auto leading-relaxed">
-                        {waStatus?.state?.instance?.state === 'open' 
-                          ? 'بوابة الإرسال جاهزة وتعمل بأفضل أداء. جميع التنبيهات ستصل لأولياء الأمور لحظياً.' 
-                          : 'يجب ربط الجلسة بمسح الباركود عبر تطبيق الواتساب في هاتفك لتفعيل الإشعارات التلقائية.'}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap justify-center gap-3 w-full">
-                      {waStatus?.state?.instance?.state !== 'open' ? (
-                        <button onClick={handleFetchQR} className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-emerald-500 text-white text-sm font-black shadow-xl shadow-emerald-500/20 transition-all hover:scale-[1.02] hover:bg-emerald-600">
-                          <QrCode size={18} />
-                          <span>توليد باركود جديد للربط</span>
-                        </button>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2 w-full">
-                          <button onClick={fetchStatus} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 transition-all hover:bg-slate-100">
-                            <RefreshCw size={16} />
-                            <span className="text-[9px] font-black uppercase">تحديث</span>
-                          </button>
-                          <button onClick={handleRestart} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 text-amber-600 transition-all hover:bg-amber-50">
-                            <Power size={16} />
-                            <span className="text-[9px] font-black uppercase">إعادة تشغيل</span>
-                          </button>
-                          <button onClick={handleLogout} className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl bg-rose-50 text-rose-600 transition-all hover:bg-rose-100">
-                            <Trash size={16} />
-                            <span className="text-[9px] font-black uppercase">قطع الربط</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                     <div className="glass-card-premium p-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                           <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إرسال تجريبي</h4>
-                           <Sparkles size={14} className="text-amber-500" />
-                        </div>
-                        <div className="space-y-3">
-                           <div className="space-y-1.5">
-                              <label className="text-[9px] font-black text-slate-400 pr-1">رقم الجوال (مع مفتاح الدولة)</label>
-                              <div className="relative">
-                                <input 
-                                  type="text" 
-                                  placeholder="9665xxxxxxxx" 
-                                  className="w-full rounded-xl bg-slate-50 dark:bg-slate-900/50 p-3 pl-10 text-xs font-bold border-none outline-none ring-1 ring-slate-100 dark:ring-white/5 focus:ring-primary/20"
-                                  value={testNumber}
-                                  onChange={(e) => setTestNumber(e.target.value)}
-                                />
-                                <Smartphone size={14} className="absolute left-3 top-3.5 text-slate-300" />
-                              </div>
-                           </div>
-                           <button onClick={handleSendTest} className="w-full py-3 rounded-xl bg-slate-900 text-white text-[10px] font-black transition-all hover:bg-slate-800">
-                              إرسال رسالة اختبار
-                           </button>
-                        </div>
-                     </div>
-
-                     <div className="glass-card-premium p-6">
-                        <div className="flex items-center gap-3 mb-4">
-                           <div className="h-8 w-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                              <Zap size={16} />
-                           </div>
-                           <div>
-                              <h4 className="text-[11px] font-black text-slate-800 dark:text-white">إحصائيات الإرسال</h4>
-                              <p className="text-[8px] font-bold text-slate-400">آخر 24 ساعة</p>
-                           </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                           <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-slate-800">
-                              <p className="text-[8px] font-black text-slate-400 uppercase mb-1">الرسائل المرسلة</p>
-                              <p className="text-sm font-black text-slate-700 dark:text-white">1,284</p>
-                           </div>
-                           <div className="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-slate-800">
-                              <p className="text-[8px] font-black text-slate-400 uppercase mb-1">نسبة النجاح</p>
-                              <p className="text-sm font-black text-emerald-500">99.2%</p>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Notifications Tab */}
             {activeTab === 'notifications' && (

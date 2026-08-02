@@ -30,7 +30,7 @@ class StaffController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'phone' => 'required|string|unique:users,phone',
+            'phone' => 'required|string',
             'role' => 'required|in:admin,teacher,manager,supervisor',
             'password' => 'nullable|string|min:8', // Allow null for imported/activation flow
             'bank_account_number' => 'nullable|string',
@@ -38,9 +38,18 @@ class StaffController extends Controller
             'qualification' => 'nullable|string',
         ]);
 
-        // Security Check: Only Owner can create Admin
+        // Phone protection per role: Ensure same role doesn't duplicate same phone
+        $existingStaff = User::where('phone', $validated['phone'])
+            ->where('role', $validated['role'])
+            ->exists();
+
+        if ($existingStaff) {
+            return response()->json(['message' => 'رقم الجوال مسجل بالفعل لعضو آخر بنفس هذا الدور الوظيفي.'], 422);
+        }
+
+        // Security Check: Only superadmin can create Admin
         if ($validated['role'] === 'admin' && $request->user()->role !== 'owner') {
-            return response()->json(['message' => 'عذراً، المالك فقط يمكنه منح صلاحية مدير النظام.'], 403);
+            return response()->json(['message' => 'عذراً، superadmin فقط يمكنه منح صلاحية مدير النظام.'], 403);
         }
 
         return DB::transaction(function() use ($validated) {
