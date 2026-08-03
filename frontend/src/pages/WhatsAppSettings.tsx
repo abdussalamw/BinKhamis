@@ -16,7 +16,6 @@ const WhatsAppSettings: React.FC = () => {
   const fetchStatus = useCallback(async () => {
     try {
       const response = await api.get('/whatsapp/status');
-      console.log('WhatsApp Status:', response.data);
       setStatus(response.data);
       setError(null);
     } catch (err: any) {

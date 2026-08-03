@@ -10,9 +10,15 @@ import {
 interface StudentInfo {
   id: string;
   name: string;
+  phone?: string;
+  academic_stage?: string;
+  grade_level?: string;
+  memorization_amount?: string;
+  status?: string;
+  // Legacy fallback
   profile?: {
-    academic_stage: string;
-    grade_level: string;
+    academic_stage?: string;
+    grade_level?: string;
   };
 }
 
@@ -195,11 +201,11 @@ const CircleDetails: React.FC = () => {
                           </div>
                         </td>
                         <td className="py-4 px-8">
-                          <div className="flex flex-col">
-                            <span className="text-xs font-black text-slate-600 dark:text-slate-400">{student.profile?.academic_stage || 'غير محدد'}</span>
-                            <span className="text-[10px] font-bold text-slate-400">{student.profile?.grade_level || '-'}</span>
-                          </div>
-                        </td>
+                           <div className="flex flex-col">
+                             <span className="text-xs font-black text-slate-600 dark:text-slate-400">{student.academic_stage || student.profile?.academic_stage || 'غير محدد'}</span>
+                             <span className="text-[10px] font-bold text-slate-400">{student.grade_level || student.profile?.grade_level || '-'}</span>
+                           </div>
+                         </td>
                         <td className="py-4 px-8 text-left">
                           <div className="flex items-center justify-end gap-2">
                             <Link 

@@ -13,13 +13,20 @@ class Attendance extends Model
     protected $table = 'attendance';
 
     protected $fillable = [
-        'student_id',
-        'circle_id',
+        'enrollment_id',
         'date',
         'status',
+        'teacher_note',
         'note',
+        'recorded_by',
+        'term_id',
         'school_id',
     ];
+
+    public function enrollment()
+    {
+        return $this->belongsTo(Enrollment::class, 'enrollment_id');
+    }
 
     public function student()
     {
@@ -29,5 +36,10 @@ class Attendance extends Model
     public function circle()
     {
         return $this->belongsTo(Circle::class);
+    }
+
+    public function recorder()
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 }

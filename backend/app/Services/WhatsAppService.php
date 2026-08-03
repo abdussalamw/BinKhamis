@@ -13,10 +13,10 @@ class WhatsAppService
 
     public function __construct()
     {
-        // D3: Use config() with env() fallback for backward compatibility
-        $this->baseUrl = config('services.whatsapp.url', env('WA_EVO_URL', 'http://localhost:8080'));
-        $this->apiKey = config('services.whatsapp.api_key', env('WA_EVO_API_KEY', ''));
-        $this->instance = config('services.whatsapp.instance', env('WA_EVO_INSTANCE', 'MainInstance'));
+        // FIX: use config() only - env() doesn't work in cached config (production)
+        $this->baseUrl = config('services.whatsapp.url', 'http://localhost:8080');
+        $this->apiKey = config('services.whatsapp.api_key', '');
+        $this->instance = config('services.whatsapp.instance', 'MainInstance');
     }
 
     /**

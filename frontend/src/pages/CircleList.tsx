@@ -41,13 +41,14 @@ const CircleList: React.FC = () => {
     setLoading(true);
     try {
       const response = await api.get('/circles');
-      let data = response.data;
+      let data = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : []);
       
       // Filter based on role if backend didn't filter yet
       if (role === 'teacher' && user?.circle_id) {
-        data = data.filter((c: any) => c.id === user.circle_id);
-      } else if (role === 'supervisor' && user?.allowed_circles?.length > 0) {
-        data = data.filter((c: any) => user.allowed_circles.includes(c.id));
+        const teacherCircles = data.filter((c: any) => c.id === user.circle_id || c.teacher_id === user.id);
+        if (teacherCircles.length > 0) {
+          data = teacherCircles;
+        }
       }
       
       setCircles(data);
@@ -59,8 +60,10 @@ const CircleList: React.FC = () => {
   };
 
   const filteredCircles = (circles || []).filter(circle => {
-    const matchesSearch = circle.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         circle.teacher?.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const circleName = (circle.name || '').toLowerCase();
+    const teacherName = (circle.teacher?.name || '').toLowerCase();
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = circleName.includes(term) || teacherName.includes(term);
     const matchesLocation = !filters.location || circle.location === filters.location;
     return matchesSearch && matchesLocation;
   });
@@ -210,25 +213,25 @@ const CircleList: React.FC = () => {
                     {filteredCircles.map(circle => (
                         <tr key={circle.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors group">
                             <td className="py-4 px-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="h-2 w-2 rounded-full bg-primary/20 group-hover:bg-primary transition-colors"></div>
+                                <Link to={`/circles/${circle.id}`} className="flex items-center gap-3 group-hover:text-primary">
+                                    <div className="h-2.5 w-2.5 rounded-full bg-primary/30 group-hover:bg-primary transition-colors"></div>
                                     <span className="font-black text-slate-800 dark:text-white text-xs group-hover:text-primary transition-colors">{circle.name}</span>
-                                </div>
+                                </Link>
                             </td>
-                            <td className="py-4 px-6 font-bold text-slate-500 text-xs">{circle.teacher?.name || '-'}</td>
+                            <td className="py-4 px-6 font-bold text-slate-600 dark:text-slate-300 text-xs">{circle.teacher?.name || '-'}</td>
                             <td className="py-4 px-6 font-bold text-slate-400 text-[10px]">{circle.location}</td>
                             <td className="py-4 px-6 text-center">
-                                <span className="bg-slate-50 dark:bg-white/5 text-slate-500 py-1 px-3 rounded-lg font-black text-[10px] border border-slate-100 dark:border-white/5">
-                                    {circle.enrollments_count}
+                                <span className="bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-300 py-1 px-3 rounded-lg font-black text-[10px] border border-slate-100 dark:border-white/5">
+                                    {circle.enrollments_count} طالب
                                 </span>
                             </td>
                             <td className="py-4 px-6 text-left">
-                                <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Link to={`/circles/${circle.id}/edit`} className="p-2 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-primary transition-all border border-slate-100 dark:border-white/5">
-                                      <Settings size={14} />
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <Link to={`/circles/${circle.id}`} title="عرض تفاصيل الحلقة" className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-primary hover:bg-primary/10 transition-all">
+                                      <Eye size={15} />
                                   </Link>
-                                  <Link to={`/circles/${circle.id}/edit`} className="p-2 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-amber-500 transition-all border border-slate-100 dark:border-white/5">
-                                      <Edit size={14} />
+                                  <Link to={`/circles/${circle.id}/edit`} title="تعديل بيانات الحلقة" className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-amber-500 hover:bg-amber-500/10 transition-all">
+                                      <Edit size={15} />
                                   </Link>
                                 </div>
                             </td>

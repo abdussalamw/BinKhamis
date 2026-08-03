@@ -2,6 +2,8 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: '/api',
+  // FIX: send credentials (HttpOnly cookie) with every request for XSS protection
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -36,7 +38,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if ((error.response?.status === 401 || error.response?.status === 403) && !window.location.pathname.includes('/auth/signin')) {
+    // FIX: only redirect to signin on 401 (unauthorized), not 403 (forbidden)
+    // 403 means the user is authenticated but doesn't have permission - shouldn't log them out
+    if (error.response?.status === 401 && !window.location.pathname.includes('/auth/signin')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       delete api.defaults.headers.common['X-School-ID'];

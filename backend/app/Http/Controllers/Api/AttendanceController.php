@@ -53,7 +53,8 @@ class AttendanceController extends Controller
                         [
                             'status' => $record['status'],
                             'term_id' => $enrollment->term_id, // Save the term_id from enrollment
-                            'recorded_by' => auth()->id() ?? User::where('role', 'admin')->first()->id,
+                            'teacher_note' => $record['note'] ?? null,
+                            'recorded_by' => auth()->id() ?? null, // FIX: don't fallback to first admin
                         ]
                     );
 
@@ -79,29 +80,34 @@ class AttendanceController extends Controller
                 ]);
             });
         } catch (\Exception $e) {
-            return response()->json(['message' => 'فشل حفظ التحضير', 'error' => $e->getMessage()], 500);
+            // FIX: hide internal error details from API response for security
+            \Log::error('Attendance store failed: ' . $e->getMessage());
+            return response()->json(['message' => 'فشل حفظ التحضير. يرجى المحاولة مرة أخرى.'], 500);
         }
     }
 
     public function getByCircle(Request $request, $circleId)
     {
-        $date = $request->query('date', Carbon::today()->toDateString());
+        $query = Attendance::whereHas('enrollment', function($q) use ($circleId) {
+            $q->where('circle_id', $circleId);
+        })->with('enrollment');
+
+        if ($request->has('date')) {
+            $query->whereDate('date', $request->query('date'));
+        } else {
+            $query->whereDate('date', '>=', Carbon::today()->subDays(14)->toDateString());
+        }
         
-        $attendance = Attendance::whereHas('enrollment', function($query) use ($circleId) {
-            $query->where('circle_id', $circleId);
-        })
-        ->whereDate('date', $date)
-        ->with('enrollment')
-        ->get();
+        $attendance = $query->get();
         
         // Map to a more friendly format for frontend
         $mapped = $attendance->map(function($item) {
             return [
-                'student_id' => $item->enrollment->student_id,
+                'student_id' => $item->enrollment->student_id ?? null,
                 'status' => $item->status,
-                'date' => $item->date->toDateString()
+                'date' => is_object($item->date) ? $item->date->toDateString() : (string)$item->date
             ];
-        });
+        })->filter(function($item) { return !is_null($item['student_id']); })->values();
             
         return response()->json($mapped);
     }

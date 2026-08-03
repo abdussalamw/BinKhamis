@@ -22,6 +22,16 @@ class TeacherProfile extends Model
         'specialization',
         'hire_date',
         'bank_account_number',
+        'bank_name',
+        'marital_status',
+        'academic_qualification',
+        'graduation_year',
+        'university',
+        'quran_ijazat',
+        'basic_salary',
+        'employment_status',
+        'identity_type',
+        'status',
         'bio',
         'profile_picture',
         'metadata'
@@ -31,6 +41,8 @@ class TeacherProfile extends Model
         'birth_date' => 'date',
         'hire_date' => 'date',
         'metadata' => 'array',
+        'quran_ijazat' => 'array',
+        'basic_salary' => 'decimal:2',
     ];
 
     public function user()

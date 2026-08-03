@@ -64,6 +64,22 @@ class ImportController extends Controller
                         ]
                     );
 
+                    $guardianPhone = $row['جوال ولي الأمر1'] ?? null;
+                    $guardianId = null;
+
+                    if ($guardianPhone) {
+                        $guardianName = $row['ولي الأمر'] ?? 'ولي أمر ' . $fullName;
+                        $guardian = \App\Models\Guardian::firstOrCreate(
+                            ['phone_number' => $guardianPhone],
+                            [
+                                'full_name' => $guardianName,
+                                'relation' => $row['القرابة1'] ?? 'أب',
+                                'whatsapp_number' => $row['جوال ولي الأمر 2'] ?? null,
+                            ]
+                        );
+                        $guardianId = $guardian->id;
+                    }
+
                     StudentProfile::updateOrCreate(
                         ['user_id' => $user->id],
                         [
@@ -74,10 +90,7 @@ class ImportController extends Controller
                             'grade_level' => $row['الصف'] ?? null,
                             'academic_stage' => $row['المرحلة'] ?? null,
                             'current_level' => $row['البرنامج'] ?? null,
-                            'parent_phone_1' => $row['جوال ولي الأمر1'] ?? null,
-                            'parent_relation_1' => $row['القرابة1'] ?? null,
-                            'parent_phone_2' => $row['جوال ولي الأمر 2'] ?? null,
-                            'parent_relation_2' => $row['القرابة2'] ?? null,
+                            'guardian_id' => $guardianId,
                             'student_phone' => $row['جوال الطالب'] ?? null,
                             'enrollment_semester' => $row['فصل القبول'] ?? null,
                             'studied_semesters' => intval($row['فصول الدراسة'] ?? 0),

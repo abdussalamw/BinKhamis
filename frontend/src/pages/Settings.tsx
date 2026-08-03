@@ -24,11 +24,43 @@ const Settings: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // General Settings State
+  const userStr = localStorage.getItem('user');
+  const user = userStr ? JSON.parse(userStr) : null;
+  const [schoolName, setSchoolName] = useState(user?.school_name || 'حلقات برو');
+  const [terms, setTerms] = useState<any[]>([]);
+  const [selectedTerm, setSelectedTerm] = useState('');
+
   useEffect(() => {
     if (activeTab === 'whatsapp') {
       fetchStatus();
+    } else if (activeTab === 'general') {
+      fetchGeneralData();
     }
   }, [activeTab]);
+
+  const fetchGeneralData = async () => {
+    try {
+      setLoading(true);
+      const [termsRes, schoolRes] = await Promise.allSettled([
+        api.get('/terms'),
+        api.get('/school-info')
+      ]);
+      if (termsRes.status === 'fulfilled' && termsRes.value.data) {
+        const termsData = termsRes.value.data;
+        setTerms(Array.isArray(termsData) ? termsData : []);
+        const current = termsData.find((t: any) => t.is_current);
+        if (current) setSelectedTerm(current.id);
+      }
+      if (schoolRes.status === 'fulfilled' && schoolRes.value.data?.name) {
+        setSchoolName(schoolRes.value.data.name);
+      }
+    } catch (error) {
+      console.error('Failed to fetch general settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchStatus = async () => {
     try {
@@ -146,8 +178,6 @@ const Settings: React.FC = () => {
     }
   };
 
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
   const role = user?.role || 'student';
 
   const allTabs = [
@@ -279,14 +309,30 @@ const Settings: React.FC = () => {
                    {/* Form Grid */}
                    <div className="flex-grow grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider pr-1">اسم المؤسسة</label>
-                        <input type="text" defaultValue="حلقات برو" className="w-full rounded-xl bg-slate-50 dark:bg-slate-800 p-3 text-sm font-bold border-none outline-none ring-2 ring-transparent focus:ring-primary/10 transition-all" />
+                        <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider pr-1">اسم المؤسسة / المجمع</label>
+                        <input 
+                          type="text" 
+                          value={schoolName} 
+                          onChange={(e) => setSchoolName(e.target.value)} 
+                          className="w-full rounded-xl bg-slate-50 dark:bg-slate-800 p-3 text-sm font-bold border-none outline-none ring-2 ring-transparent focus:ring-primary/10 transition-all" 
+                        />
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider pr-1">الفصل الدراسي الحالي</label>
-                        <select className="w-full rounded-xl bg-slate-50 dark:bg-slate-800 p-3 text-sm font-bold border-none outline-none ring-2 ring-transparent focus:ring-primary/10">
-                          <option selected>الفصل الثاني 1447</option>
-                          <option>الفصل الثالث 1447</option>
+                        <select 
+                          value={selectedTerm} 
+                          onChange={(e) => setSelectedTerm(e.target.value)} 
+                          className="w-full rounded-xl bg-slate-50 dark:bg-slate-800 p-3 text-sm font-bold border-none outline-none ring-2 ring-transparent focus:ring-primary/10"
+                        >
+                          {terms.length > 0 ? (
+                            terms.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name} {t.is_current ? '(الحالي)' : ''}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="">لا توجد فصول دراسية مقيدة</option>
+                          )}
                         </select>
                       </div>
                       <div className="space-y-1.5">

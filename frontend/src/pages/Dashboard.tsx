@@ -221,7 +221,7 @@ const Dashboard: React.FC = () => {
       setRole(userData.role);
       fetchRealDashboardData(userData.role);
       
-      if (userData.role === 'supervisor' || userData.role === 'admin' || userData.role === 'teacher') {
+      if (userData.role === 'supervisor' || userData.role === 'manager' || userData.role === 'admin' || userData.role === 'teacher') {
         fetchStaffAndStudents();
       }
     } else {
@@ -233,19 +233,13 @@ const Dashboard: React.FC = () => {
     setLoading(true);
     try {
       if (userRole === 'superadmin' || userRole === 'owner') {
+        // FIX: /super-admin endpoint doesn't exist, use /super-admin/schools directly
         try {
-          const res = await api.get('/super-admin');
-          let data = res.data;
-          const hasSchools = Array.isArray(data) ? data.length > 0 : (data?.schools?.length > 0);
-          
-          if (!hasSchools) {
-            const schoolsRes = await api.get('/super-admin/schools');
-            data = schoolsRes.data;
-          }
-          setRealStats(data);
-        } catch (e) {
           const schoolsRes = await api.get('/super-admin/schools');
           setRealStats(schoolsRes.data);
+        } catch (e) {
+          console.error("Error fetching schools data:", e);
+          setRealStats({ schools: [], stats: { total_schools: 0, total_students: 0, total_staff: 0, total_circles: 0 } });
         }
       } else {
         const res = await api.get('/stats/overview');
@@ -267,12 +261,15 @@ const Dashboard: React.FC = () => {
 
   const fetchStaffAndStudents = async () => {
     try {
+      // FIX: handle paginated staff response (StaffController now returns paginate())
       const staffRes = await api.get('/staff');
-      const managementStaff = staffRes.data.filter((s: any) => s.role === 'admin' || s.role === 'manager');
+      const staffData = staffRes.data?.data || (Array.isArray(staffRes.data) ? staffRes.data : []);
+      const managementStaff = staffData.filter((s: any) => s.role === 'admin' || s.role === 'manager');
       setStaff(managementStaff.slice(0, 3));
 
       const studentsRes = await api.get('/students');
-      const sortedStudents = [...studentsRes.data].sort((a, b) => 
+      const studentList = studentsRes.data?.data || (Array.isArray(studentsRes.data) ? studentsRes.data : []);
+      const sortedStudents = [...studentList].sort((a: any, b: any) => 
         new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
       );
       setRecentStudents(sortedStudents.slice(0, 5));
@@ -296,6 +293,7 @@ const Dashboard: React.FC = () => {
       case 'owner':
         return <OwnerDashboard data={realStats} />;
       case 'supervisor':
+      case 'manager':
         return <SupervisorDashboard data={realStats} staff={staff} schoolInfo={schoolInfo} />;
       case 'admin':
       case 'teacher':

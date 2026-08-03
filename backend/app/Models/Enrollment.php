@@ -16,6 +16,8 @@ class Enrollment extends Model
         'circle_id',
         'enrolled_at',
         'status',
+        'term_id',
+        'notes',
         'school_id',
     ];
 
@@ -27,5 +29,15 @@ class Enrollment extends Model
     public function circle()
     {
         return $this->belongsTo(Circle::class);
+    }
+
+    public function term()
+    {
+        return $this->belongsTo(AcademicTerm::class, 'term_id');
+    }
+
+    public function attendance()
+    {
+        return $this->hasMany(Attendance::class, 'enrollment_id');
     }
 }

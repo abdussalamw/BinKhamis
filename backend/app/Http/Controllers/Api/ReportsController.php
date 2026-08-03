@@ -10,11 +10,21 @@ use App\Models\ProgressTracking;
 use App\Models\AcademicTerm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 
 class ReportsController extends Controller
 {
     public function dashboardOverview(Request $request)
+    {
+        // FIX: cache the heavy dashboard report for 5 minutes to reduce N+1 query load
+        $cacheKey = 'dashboard_overview_' . (auth()->user()->school_id ?? 'central');
+        return Cache::remember($cacheKey, 300, function () {
+            return $this->buildDashboardOverview();
+        });
+    }
+
+    protected function buildDashboardOverview()
     {
         Carbon::setLocale('ar');
         $currentTerm = AcademicTerm::where('is_current', true)->first();
@@ -60,32 +70,30 @@ class ReportsController extends Controller
         $monthlyProgress = [];
         for ($i = 5; $i >= 0; $i--) {
             $date = Carbon::now()->subMonths($i);
-            $month = $date->month;
-            $year = $date->year;
+            $startOfMonth = $date->copy()->startOfMonth()->toDateString();
+            $endOfMonth = $date->copy()->endOfMonth()->toDateString();
             
-            $baseQuery = Attendance::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
-                ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year]);
+            $baseQuery = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth]);
 
             $monthlyProgress[] = [
                 'name' => $date->translatedFormat('F'),
-                'achievements' => ProgressTracking::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
-                    ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year])
-                    ->count(),
+                'achievements' => ProgressTracking::whereBetween('date', [$startOfMonth, $endOfMonth])->count(),
                 'present' => (clone $baseQuery)->where('status', 'present')->count(),
                 'late' => (clone $baseQuery)->where('status', 'late')->count(),
                 'absent' => (clone $baseQuery)->where('status', 'absent')->count(),
                 'excused' => (clone $baseQuery)->where('status', 'excused')->count(),
                 'students' => User::where('role', 'student')
-                    ->whereRaw("created_at::date <= ?", [$date->endOfMonth()->toDateString()])
+                    ->whereDate('created_at', '<=', $endOfMonth)
                     ->count()
             ];
         }
 
-        // 3. Distribution
-        $programDistribution = DB::table('student_profiles')
-            ->select('memorization_method as name', DB::raw('count(*) as value'))
-            ->whereNotNull('memorization_method')
-            ->groupBy('memorization_method')
+        // 3. Distribution (FIX: profiles/student_profiles tables were merged into users)
+        $programDistribution = DB::table('users')
+            ->select('memorization_amount as name', DB::raw('count(*) as value'))
+            ->where('role', 'student')
+            ->whereNotNull('memorization_amount')
+            ->groupBy('memorization_amount')
             ->get();
 
         // 4. Rankings
@@ -107,14 +115,15 @@ class ReportsController extends Controller
                 ];
             })->sortByDesc('attendance')->values()->take(10);
 
-        // 5. Stage Breakdown
-        $stageBreakdown = DB::table('profiles')
-            ->select('current_level as name', DB::raw('count(*) as students'))
-            ->whereNotNull('current_level')
-            ->groupBy('current_level')
+        // 5. Stage Breakdown (FIX: profiles table merged into users - use academic_stage)
+        $stageBreakdown = DB::table('users')
+            ->select('academic_stage as name', DB::raw('count(*) as students'))
+            ->where('role', 'student')
+            ->whereNotNull('academic_stage')
+            ->groupBy('academic_stage')
             ->get()
             ->map(function($stage) {
-                $studentIds = DB::table('profiles')->where('current_level', $stage->name)->pluck('user_id');
+                $studentIds = DB::table('users')->where('academic_stage', $stage->name)->where('role', 'student')->pluck('id');
                 $enrollmentIds = DB::table('enrollments')->whereIn('student_id', $studentIds)->pluck('id');
                 
                 $totalAtt = $enrollmentIds->count() > 0 ? Attendance::whereIn('enrollment_id', $enrollmentIds)->count() : 0;
@@ -128,9 +137,8 @@ class ReportsController extends Controller
                 ];
             });
 
-        // 6. Top Students
+        // 6. Top Students (FIX: profile->current_level replaced with memorization_amount)
         $topStudents = User::where('role', 'student')
-            ->with('profile')
             ->get()
             ->map(function($student) {
                 $enrollmentIds = DB::table('enrollments')->where('student_id', $student->id)->pluck('id');
@@ -141,7 +149,7 @@ class ReportsController extends Controller
                 return [
                     'id' => $student->id,
                     'name' => $student->name,
-                    'level' => $student->profile->current_level ?? 'غير محدد',
+                    'level' => $student->memorization_amount ?? $student->academic_stage ?? 'غير محدد',
                     'presence' => $presentAtt,
                     'late' => $lateAtt,
                     'rate' => $totalAtt > 0 ? round(($presentAtt / $totalAtt) * 100, 1) : 0
@@ -191,7 +199,8 @@ class ReportsController extends Controller
     public function studentReport($id)
     {
         Carbon::setLocale('ar');
-        $student = User::with('profile')->findOrFail($id);
+        // FIX: profile relation removed after merge - user fields are now on users table
+        $student = User::findOrFail($id);
         
         $enrollmentIds = DB::table('enrollments')->where('student_id', $id)->pluck('id');
 
@@ -256,17 +265,14 @@ class ReportsController extends Controller
 
     private function getAttendanceRateForMonth($date)
     {
-        $month = $date->month;
-        $year = $date->year;
+        $startOfMonth = $date->copy()->startOfMonth()->toDateString();
+        $endOfMonth = $date->copy()->endOfMonth()->toDateString();
         
-        $total = Attendance::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
-            ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year])
-            ->count();
+        $total = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth])->count();
             
         if ($total == 0) return 0;
         
-        $present = Attendance::whereRaw("EXTRACT(MONTH FROM date::date) = ?", [$month])
-            ->whereRaw("EXTRACT(YEAR FROM date::date) = ?", [$year])
+        $present = Attendance::whereBetween('date', [$startOfMonth, $endOfMonth])
             ->where('status', 'present')
             ->count();
             

@@ -48,8 +48,10 @@ const Reports: React.FC = () => {
       return;
     }
     try {
-      const response = await api.get(`/students?search=${val}`);
-      setSearchResults(response.data.slice(0, 5));
+      const response = await api.get(`/students?search=${val}&per_page=5`);
+      const raw = response.data;
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+      setSearchResults(list.slice(0, 5));
     } catch (err) {
       console.error('Search error:', err);
     }
@@ -162,7 +164,7 @@ const Reports: React.FC = () => {
           </div>
         </div>
       )}
-3      {activeTab === 'complex' && (
+      {activeTab === 'complex' && (
         <div className="space-y-6 md:space-y-8">
           {/* Term Info Banner */}
           <div className="bg-indigo-600 rounded-3xl p-6 text-white relative overflow-hidden shadow-xl shadow-indigo-200">
@@ -170,7 +172,7 @@ const Reports: React.FC = () => {
                 <div className="flex items-center gap-2 text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-1">
                    <Calendar size={12} /> الفصل الدراسي الحالي
                 </div>
-                <h2 className="text-2xl font-black">{reportData.term?.name || 'الفصل الدراسي الثاني 1447'}</h2>
+                <h2 className="text-2xl font-black">{reportData.term?.name || 'الفصل الدراسي الحالي'}</h2>
                 <div className="mt-4 flex flex-wrap gap-4">
                    <div className="bg-white/10 px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10">
                       <p className="text-[9px] font-bold text-indigo-100 uppercase">بدأ في</p>
@@ -362,7 +364,7 @@ const Reports: React.FC = () => {
                         <div key={i} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-white/5">
                            <div className="flex flex-col">
                               <span className="text-[10px] font-black text-slate-700 dark:text-slate-200">{a.student?.name || 'طالب'}</span>
-                              <span className="text-[8px] font-bold text-slate-400">{a.date}</span>
+                              <span className="text-[8px] font-bold text-slate-400">{new Date(a.date).toLocaleDateString('ar-SA')}</span>
                            </div>
                            <span className={`px-3 py-1 rounded-lg text-[9px] font-black ${a.status === 'present' ? 'bg-emerald-100 text-emerald-700' : a.status === 'late' ? 'bg-amber-100 text-amber-700' : a.status === 'excused' ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'}`}>
                               {a.status === 'present' ? 'حاضر' : a.status === 'late' ? 'متأخر' : a.status === 'excused' ? 'مستأذن' : 'غائب'}

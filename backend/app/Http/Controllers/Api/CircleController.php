@@ -14,12 +14,25 @@ class CircleController extends Controller
      */
     public function index()
     {
-        $circles = Circle::with(['teacher', 'term'])
-            ->withCount(['enrollments' => function($query) {
-                $query->where('status', 'active');
-            }])
-            ->get();
-            
+        $user = auth()->user();
+        $query = Circle::with(['teacher', 'term'])
+            ->withCount(['enrollments' => function($q) {
+                $q->where('status', 'active');
+            }]);
+
+        if ($user) {
+            if (!$user->school_id || $user->role === 'owner') {
+                $query->withoutGlobalScope('school');
+            } else {
+                $query->withoutGlobalScope('school')
+                      ->where(function($q) use ($user) {
+                          $q->where('school_id', $user->school_id)
+                            ->orWhereNull('school_id');
+                      });
+            }
+        }
+
+        $circles = $query->get();
         return response()->json($circles);
     }
 
@@ -57,13 +70,32 @@ class CircleController extends Controller
      */
     public function show(string $id)
     {
-        $circle = Circle::with(['teacher', 'term', 'enrollments' => function($query) {
-                $query->where('status', 'active')->with('student.profile');
-            }])
-            ->withCount(['enrollments' => function($query) {
-                $query->where('status', 'active');
-            }])
-            ->findOrFail($id);
+        $user = auth()->user();
+        $query = Circle::with([
+                'teacher',
+                'term',
+                'enrollments' => function($q) {
+                    $q->where('status', 'active')
+                      ->with(['student' => function($sq) {
+                          $sq->with(['guardian'])
+                             ->select('id', 'name', 'phone', 'academic_stage', 'grade_level',
+                                      'memorization_amount', 'status', 'school_id', 'guardian_id');
+                      }]);
+                }
+            ])
+            ->withCount(['enrollments' => function($q) {
+                $q->where('status', 'active');
+            }]);
+
+        if ($user && $user->role === 'owner') {
+            $query->withoutGlobalScope('school');
+        }
+
+        $circle = $query->find($id);
+
+        if (!$circle) {
+            return response()->json(['message' => 'عذراً، الحلقة غير موجودة'], 404);
+        }
             
         return response()->json($circle);
     }

@@ -32,6 +32,12 @@ class IdentifyTenant
         $oldSchemaName = 'school_' . str_replace('-', '_', substr($schoolId, 0, 8));
 
         try {
+            if (DB::connection('central')->getDriverName() !== 'pgsql') {
+                // If not using PostgreSQL, we rely entirely on global scopes (BelongsToSchool) 
+                // and don't need to switch physical schemas.
+                return;
+            }
+
             // Check if the new full-UUID schema exists in PostgreSQL
             $schemaExists = DB::connection('central')->selectOne(
                 "SELECT schema_name FROM information_schema.schemata WHERE schema_name = ?", [$schemaName]

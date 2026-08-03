@@ -5,38 +5,78 @@ import {
   User as UserIcon, Phone, MapPin, Calendar, Award, 
   CheckCircle, Clock, BookOpen, ChevronLeft, 
   Hash, Flag, School, Users, Activity, LogOut,
-  Smartphone, Shield, Edit
+  Smartphone, Shield, Edit, UserX, Globe
 } from 'lucide-react';
 
-interface StudentProfileData {
+interface StudentData {
   id: string;
   name: string;
   phone: string;
-  profile: any | null;
-  student_profile?: any | null;
-  active_profile?: any | null;
+  role: string;
+  status: string;
+  identity_type: string;
+  national_id?: string;
+  passport_number?: string;
+  place_of_birth?: string;
+  birth_date?: string;
+  academic_stage?: string;
+  grade_level?: string;
+  memorization_amount?: string;
+  neighborhood?: string;
+  school_name?: string;
+  is_active: boolean;
+  school_id?: string;
+  guardian_id?: string;
+  secondary_guardian_id?: string;
+  guardian?: {
+    id: string;
+    full_name: string;
+    phone_number: string;
+    whatsapp_number?: string;
+    relation?: string;
+  };
+  secondary_guardian?: {
+    id: string;
+    full_name: string;
+    phone_number: string;
+    whatsapp_number?: string;
+    relation?: string;
+  };
   enrollments?: Array<{
     id: string;
+    status: string;
     circle: {
       id: string;
       name: string;
-    }
+      location?: string;
+    };
   }>;
 }
+
+const InfoItem = ({ icon, label, value }: { icon: React.ReactNode, label: string, value?: string | null }) => (
+  value ? (
+    <div className="flex items-start gap-3 py-2 border-b border-slate-100 dark:border-slate-800/50 last:border-0">
+      <span className="text-primary mt-0.5 shrink-0">{icon}</span>
+      <div>
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
+        <p className="font-bold text-slate-700 dark:text-slate-200 text-sm">{value}</p>
+      </div>
+    </div>
+  ) : null
+);
 
 const StudentProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [student, setStudent] = useState<StudentProfileData | null>(null);
+  const [student, setStudent] = useState<StudentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [accessDenied, setAccessDenied] = useState(false);
 
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  let user: any = null;
+  try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch {}
   const role = user?.role || 'student';
 
   useEffect(() => {
-    // 1. Initial check for students
     if (role === 'student' && id !== user?.id) {
       setAccessDenied(true);
       setLoading(false);
@@ -49,23 +89,7 @@ const StudentProfile: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get(`/students/${id}`);
-      const data = response.data;
-      
-      // 2. Secondary check for Teachers/Supervisors after data is fetched
-      const studentCircleId = data.enrollments?.[0]?.circle?.id;
-      
-      if (role === 'teacher' && user?.circle_id && studentCircleId !== user.circle_id) {
-        setAccessDenied(true);
-      } else if ((role === 'supervisor' || role === 'manager') && user?.allowed_circles?.length > 0 && !user.allowed_circles.includes(studentCircleId)) {
-         setAccessDenied(true);
-      } else {
-        // Merge profiles for easy access in the template
-        const effectiveProfile = data.student_profile || data.active_profile || data.profile || {};
-        setStudent({
-          ...data,
-          profile: effectiveProfile
-        });
-      }
+      setStudent(response.data);
     } catch (error) {
       console.error('Error fetching student profile:', error);
     } finally {
@@ -98,65 +122,72 @@ const StudentProfile: React.FC = () => {
     </div>
   );
 
-  const currentCircle = student.enrollments && student.enrollments.length > 0 
-    ? student.enrollments[0].circle 
-    : null;
+  const currentCircle = student.enrollments?.find(e => e.status === 'active')?.circle || null;
+  const guardian = student.guardian;
+  const secondaryGuardian = student.secondary_guardian;
+
+  const identityTypeLabel = 
+    student.identity_type === 'iqama' ? 'هوية مقيم' :
+    student.identity_type === 'passport' ? 'رقم جواز' :
+    student.identity_type === 'border_number' ? 'رقم حدود' : 'هوية وطنية';
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-7xl mx-auto pb-20">
       {/* Navigation & Actions */}
       <div className="flex items-center justify-between">
         <Link to="/students" className="flex items-center gap-2 text-slate-500 hover:text-primary font-bold transition-colors">
           <ChevronLeft size={20} />
-          العودة لقاعدة البيانات
+          العودة لقائمة الطلاب
         </Link>
         <div className="flex gap-3">
-          {(role === 'admin' || role === 'supervisor') && (
+          {(role === 'admin' || role === 'supervisor' || role === 'owner') && (
             <button 
-              onClick={() => navigate(`/students/edit/${student.id}`)}
-              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-all shadow-sm"
+              onClick={() => navigate(`/students/${student.id}/edit`)}
+              className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-all shadow-sm"
             >
               <Edit size={18} />
-              تعديل البيانات
+              تعديل بيانات الطالب
             </button>
           )}
-          <button className="px-6 py-3 rounded-2xl bg-primary text-white font-black hover:bg-primary-dark transition-all shadow-lg shadow-primary/30">تقرير الإنجاز</button>
         </div>
       </div>
 
-      {/* Hero Profile Section */}
-      <div className="relative">
-        <div className="h-48 w-full rounded-[2.5rem] bg-gradient-to-br from-primary via-[#4e73df] to-[#224abe] shadow-2xl overflow-hidden relative">
-          <div className="absolute inset-0 bg-white/5 backdrop-blur-[1px]"></div>
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <UserIcon size={180} className="text-white" />
-          </div>
+      {/* Profile Hero */}
+      <div className="glass-card rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/10">
+        <div className="h-36 bg-gradient-to-br from-primary via-teal-500 to-emerald-600 relative">
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white to-transparent"></div>
         </div>
-        
-        <div className="px-8 -mt-20">
-          <div className="glass-card p-8 rounded-[2.5rem] shadow-2xl border border-white/20 relative z-10">
-            <div className="flex flex-col md:flex-row gap-8 items-center md:items-end">
-              <div className="h-40 w-40 rounded-3xl bg-white p-2 shadow-2xl dark:bg-slate-800 -mt-20 md:-mt-24">
-                <div className="h-full w-full rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center font-black text-primary text-6xl shadow-inner">
-                  {(student.name || '?').charAt(0)}
-                </div>
+        <div className="px-8 pb-8">
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-end -mt-16 mb-8">
+            <div className="h-32 w-32 rounded-[2rem] overflow-hidden border-4 border-white dark:border-slate-900 shadow-2xl bg-white shrink-0">
+              <div className="h-full w-full rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center font-black text-primary text-6xl shadow-inner">
+                {(student.name || '?').charAt(0)}
               </div>
-              <div className="flex-grow text-center md:text-right">
-                <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 mb-2">
-                  <h1 className="text-4xl font-black text-slate-800 dark:text-white leading-tight">{student.name}</h1>
-                  {currentCircle ? (
-                    <span className="px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-black border border-emerald-500/20 flex items-center gap-2">
-                       <CheckCircle size={14} /> ملتحق بـ {currentCircle.name}
-                    </span>
-                  ) : (
-                    <span className="px-4 py-1.5 rounded-full bg-slate-500/10 text-slate-500 text-xs font-black border border-slate-500/20">غير مسكن</span>
-                  )}
-                </div>
-                <div className="flex flex-wrap justify-center md:justify-start gap-6">
-                  <span className="flex items-center gap-2 text-sm font-bold text-slate-500"><School size={18} className="text-primary" /> {student.profile?.academic_stage} - {student.profile?.grade_level}</span>
-                  <span className="flex items-center gap-2 text-sm font-bold text-slate-500"><Award size={18} className="text-amber-500" /> برنامج {student.profile?.program || 'عام'}</span>
-                  <span className="flex items-center gap-2 text-sm font-bold text-slate-500"><MapPin size={18} className="text-rose-500" /> {student.profile?.neighborhood || 'غير محدد'}</span>
-                </div>
+            </div>
+            <div className="flex-grow text-center md:text-right">
+              <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 mb-2">
+                <h1 className="text-4xl font-black text-slate-800 dark:text-white leading-tight">{student.name}</h1>
+                {currentCircle ? (
+                  <span className="px-4 py-1.5 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-black border border-emerald-500/20 flex items-center gap-2">
+                     <CheckCircle size={14} /> ملتحق بـ {currentCircle.name}
+                  </span>
+                ) : (
+                  <span className="px-4 py-1.5 rounded-full bg-slate-500/10 text-slate-500 text-xs font-black border border-slate-500/20">غير مسكن</span>
+                )}
+                {student.status === 'discontinued' ? (
+                  <span className="px-4 py-1.5 rounded-full bg-rose-500/10 text-rose-500 text-xs font-black border border-rose-500/20 flex items-center gap-1.5">
+                    <UserX size={14} /> منقطع
+                  </span>
+                ) : (
+                  <span className="px-4 py-1.5 rounded-full bg-teal-500/10 text-teal-600 text-xs font-black border border-teal-500/20 flex items-center gap-1.5">
+                    <Activity size={14} /> نشط
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap justify-center md:justify-start gap-6">
+                <span className="flex items-center gap-2 text-sm font-bold text-slate-500"><School size={18} className="text-primary" /> {student.academic_stage || 'عام'} - {student.grade_level || 'غير محدد'}</span>
+                <span className="flex items-center gap-2 text-sm font-bold text-slate-500"><Award size={18} className="text-amber-500" /> الحفظ: {student.memorization_amount || 'مسار عام'}</span>
+                <span className="flex items-center gap-2 text-sm font-bold text-slate-500"><MapPin size={18} className="text-rose-500" /> {student.neighborhood || 'غير محدد'}</span>
               </div>
             </div>
           </div>
@@ -164,144 +195,161 @@ const StudentProfile: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Right Column: Detailed Info Grid */}
+        {/* Main Details Grid */}
         <div className="lg:col-span-8 space-y-8">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Identity & Personal */}
-            <div className="glass-card p-8 rounded-3xl shadow-xl border border-white/10">
-              <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-3">
+            <div className="glass-card p-8 rounded-3xl shadow-xl border border-white/10 space-y-4">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-3">
                 <Shield className="text-primary" size={24} />
-                البيانات الثبوتية
+                البيانات الثبوتية والهوية
               </h3>
-              <div className="space-y-5">
-                <InfoItem icon={<Hash size={18}/>} label="رقم الهوية" value={student.profile?.national_id} />
-                <InfoItem icon={<Flag size={18}/>} label="الجنسية" value={student.profile?.nationality} />
-                <InfoItem icon={<Calendar size={18}/>} label="تاريخ الميلاد" value={student.profile?.birth_date} />
-                <InfoItem icon={<UserIcon size={18}/>} label="الاسم المختصر" value={student.profile?.short_name} />
+              <div className="space-y-4 pt-2">
+                <InfoItem icon={<Flag size={18}/>} label="نوع الهوية" value={identityTypeLabel} />
+                <InfoItem icon={<Hash size={18}/>} label="رقم الهوية / المقيم / الحدود" value={student.national_id} />
+                {student.passport_number && (
+                  <InfoItem icon={<Globe size={18}/>} label="رقم الجواز" value={student.passport_number} />
+                )}
+                <InfoItem icon={<MapPin size={18}/>} label="مكان الميلاد" value={student.place_of_birth} />
+                <InfoItem icon={<Calendar size={18}/>} label="تاريخ الميلاد" value={student.birth_date} />
               </div>
             </div>
 
             {/* Academic History */}
-            <div className="glass-card p-8 rounded-3xl shadow-xl border border-white/10">
-              <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-3">
+            <div className="glass-card p-8 rounded-3xl shadow-xl border border-white/10 space-y-4">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-3">
                 <Activity className="text-amber-500" size={24} />
-                السجل الأكاديمي
+                السجل الأكاديمي والقرآني
               </h3>
-              <div className="space-y-5">
-                <InfoItem icon={<Clock size={18}/>} label="فصل القبول" value={student.profile?.enrollment_semester} />
-                <InfoItem icon={<BookOpen size={18}/>} label="فصول الدراسة" value={student.profile?.studied_semesters?.toString()} unit="فصل" />
-                <InfoItem icon={<Award size={18}/>} label="سنة الختمة" value={student.profile?.completion_year} />
-                <InfoItem icon={<LogOut size={18}/>} label="حالة الانتهاء" value={student.profile?.end_reason} />
+              <div className="space-y-4 pt-2">
+                <InfoItem icon={<School size={18}/>} label="المرحلة الدراسية" value={student.academic_stage} />
+                <InfoItem icon={<BookOpen size={18}/>} label="الصف / المستوى" value={student.grade_level} />
+                <InfoItem icon={<Award size={18}/>} label="مقدار الحفظ" value={student.memorization_amount} />
+                <InfoItem icon={<Clock size={18}/>} label="حالة القيد" value={student.status === 'discontinued' ? 'منقطع' : student.status === 'graduated' ? 'متخرج' : 'نشط'} />
+                <InfoItem icon={<MapPin size={18}/>} label="الحي" value={student.neighborhood} />
+                <InfoItem icon={<School size={18}/>} label="المدرسة" value={student.school_name} />
               </div>
             </div>
           </div>
 
-          {/* Contact Section */}
+          {/* Contact & Guardian Section */}
           <div className="glass-card p-8 rounded-3xl shadow-xl border border-white/10">
-            <h3 className="text-lg font-black text-slate-800 dark:text-white mb-8 flex items-center gap-3">
-              <Users className="text-indigo-500" size={24} />
-              بيانات التواصل العائلي
+            <h3 className="text-lg font-black text-slate-800 dark:text-white mb-6 flex items-center gap-3">
+              <Users className="text-teal-500" size={24} />
+              بيانات التواصل وأولياء الأمور
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-6">
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <p className="text-xs font-black text-slate-400 mb-2">جهة الاتصال الأساسية</p>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-black text-slate-700 dark:text-slate-200 text-lg">{student.profile?.parent_phone_1 || 'غير متوفر'}</p>
-                      <p className="text-xs font-bold text-primary">صلة القرابة: {student.profile?.parent_relation_1}</p>
-                    </div>
-                    <div className="h-12 w-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20">
-                      <Smartphone size={24} />
-                    </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Student Phone */}
+              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <p className="text-xs font-black text-slate-400 mb-2">جوال الطالب مباشر</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-black text-slate-700 dark:text-slate-200 text-lg dir-ltr text-right">{student.phone || 'غير متوفر'}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                    <Smartphone size={22} />
                   </div>
                 </div>
               </div>
-              <div className="space-y-6">
-                <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
-                  <p className="text-xs font-black text-slate-400 mb-2">جهة الاتصال الثانوية</p>
+
+              {/* Guardian 1 */}
+              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800">
+                <p className="text-xs font-black text-slate-400 mb-2">ولي الأمر 1 (الرئيسي)</p>
+                {guardian ? (
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-black text-slate-700 dark:text-slate-200 text-lg">{student.profile?.parent_phone_2 || 'غير متوفر'}</p>
-                      <p className="text-xs font-bold text-slate-500">صلة القرابة: {student.profile?.parent_relation_2 || '-'}</p>
+                      <p className="font-black text-slate-800 dark:text-white text-base">{guardian.full_name}</p>
+                      <p className="text-xs font-bold text-teal-600 dark:text-teal-400 mt-1">{guardian.relation || 'ولي أمر'} — {guardian.phone_number}</p>
                     </div>
-                    <div className="h-12 w-12 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center">
-                      <Phone size={24} />
+                    <div className="h-12 w-12 rounded-xl bg-teal-500/10 text-teal-600 flex items-center justify-center">
+                      <Phone size={22} />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm font-bold text-slate-400">غير مسجل</p>
+                )}
+              </div>
+
+              {/* Guardian 2 */}
+              {secondaryGuardian && (
+                <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 md:col-span-2">
+                  <p className="text-xs font-black text-slate-400 mb-2">ولي الأمر 2 (إضافي)</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-black text-slate-800 dark:text-white text-base">{secondaryGuardian.full_name}</p>
+                      <p className="text-xs font-bold text-cyan-600 dark:text-cyan-400 mt-1">{secondaryGuardian.relation || 'ولي أمر 2'} — {secondaryGuardian.phone_number}</p>
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-cyan-500/10 text-cyan-600 flex items-center justify-center">
+                      <Phone size={22} />
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Left Column: Side Stats */}
+        {/* Quick Actions Panel */}
         <div className="lg:col-span-4 space-y-8">
-          {/* Quick Contact Card */}
-          <div className="glass-card p-8 rounded-3xl bg-primary shadow-2xl shadow-primary/20 text-white overflow-hidden relative group">
-            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
-              <Smartphone size={150} />
-            </div>
-            <h3 className="text-xl font-black mb-6 relative z-10">تواصل سريع</h3>
-            <div className="space-y-4 relative z-10">
-              <a href={`tel:${student.phone}`} className="flex items-center gap-4 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all border border-white/10">
-                <Phone size={20} />
-                <span className="font-black">اتصال بالطالب</span>
-              </a>
-              <a href={`https://wa.me/${student.profile?.parent_phone_1}`} target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 rounded-2xl bg-emerald-500/80 hover:bg-emerald-500 transition-all shadow-lg">
-                <CheckCircle size={20} />
-                <span className="font-black">واتساب ولي الأمر</span>
-              </a>
+          <div className="glass-card p-8 rounded-3xl bg-gradient-to-br from-primary to-teal-700 text-white shadow-2xl relative overflow-hidden">
+            <h3 className="text-xl font-black mb-6">إجراءات سريعة</h3>
+            <div className="space-y-3">
+              {student.phone && (
+                <a href={`tel:${student.phone}`} className="flex items-center gap-3 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all font-bold text-sm">
+                  <Phone size={18} />
+                  <span>اتصال بالطالب</span>
+                </a>
+              )}
+              {guardian?.phone_number && (
+                <a href={`tel:${guardian.phone_number}`} className="flex items-center gap-3 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all font-bold text-sm">
+                  <Phone size={18} />
+                  <span>اتصال بولي الأمر</span>
+                </a>
+              )}
+              {guardian?.whatsapp_number && (
+                <a href={`https://wa.me/${guardian.whatsapp_number?.replace(/[^0-9]/g,'')}`} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all font-bold text-sm">
+                  <Phone size={18} />
+                  <span>واتساب ولي الأمر</span>
+                </a>
+              )}
+              {(role === 'admin' || role === 'supervisor' || role === 'owner') && (
+                <Link to={`/students/${student.id}/edit`} className="flex items-center gap-3 p-4 rounded-2xl bg-white/10 hover:bg-white/20 transition-all font-bold text-sm">
+                  <UserIcon size={18} />
+                  <span>تعديل البيانات</span>
+                </Link>
+              )}
             </div>
           </div>
 
-          <div className="glass-card p-8 rounded-3xl shadow-xl border border-white/10">
-            <h3 className="text-xl font-black text-slate-800 dark:text-white mb-6">الحلقة الحالية</h3>
-            {currentCircle ? (
-              <div className="p-6 rounded-2xl bg-emerald-50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/20">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-emerald-500 text-white flex items-center justify-center">
-                    <Users size={24} />
-                  </div>
-                  <div>
-                    <p className="font-black text-slate-800 dark:text-white">{currentCircle.name}</p>
-                    <Link to={`/circles/${currentCircle.id}`} className="text-xs font-bold text-emerald-600 hover:underline">عرض تفاصيل الحلقة</Link>
-                  </div>
-                </div>
+          {/* Enrolled Circles */}
+          {student.enrollments && student.enrollments.length > 0 && (
+            <div className="glass-card p-8 rounded-3xl shadow-xl border border-white/10">
+              <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-3">
+                <BookOpen className="text-emerald-500" size={22} />
+                الحلقات المسجل فيها
+              </h3>
+              <div className="space-y-3">
+                {student.enrollments.map(enrollment => (
+                  <Link key={enrollment.id} to={`/circles/${enrollment.circle?.id}`} className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center font-black text-lg">
+                      {(enrollment.circle?.name || '?').charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-700 dark:text-slate-200 text-sm">{enrollment.circle?.name}</p>
+                      <p className="text-[10px] font-bold text-emerald-600">{enrollment.status === 'active' ? 'ملتحق' : 'غير نشط'}</p>
+                    </div>
+                    <ChevronLeft size={16} className="mr-auto text-slate-300" />
+                  </Link>
+                ))}
               </div>
-            ) : (
-              <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-800 text-center border border-dashed border-slate-200">
-                <p className="text-sm font-bold text-slate-400">الطالب غير ملتحق بأي حلقة حالياً</p>
-                <button className="mt-4 text-primary font-black text-xs hover:underline">تسكين في حلقة</button>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
-
-interface InfoItemProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | null | undefined;
-  unit?: string;
-}
-
-const InfoItem: React.FC<InfoItemProps> = ({ icon, label, value, unit }) => (
-  <div className="flex items-center gap-4 group">
-    <div className="h-11 w-11 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-primary/10 group-hover:text-primary transition-all shadow-sm">
-      {icon}
-    </div>
-    <div className="flex-grow">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</p>
-      <p className="font-black text-slate-700 dark:text-slate-200">
-        {value || 'غير مسجل'} {value && unit && <span className="text-xs font-bold text-slate-400 mr-1">{unit}</span>}
-      </p>
-    </div>
-  </div>
-);
 
 export default StudentProfile;

@@ -2,11 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
-    <script type="module" crossorigin src="/assets/index-BN062Vpc.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BsO3Hq5H.css">
+    <title>حلقات برو</title>
+    <script>
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        if(!localStorage.theme) localStorage.setItem('theme', 'light');
+      }
+
+      try {
+        const settings = JSON.parse(localStorage.getItem('platform_settings'));
+        if (settings && settings.site_name) {
+          document.title = settings.site_name;
+        }
+      } catch(e) {}
+    </script>
+    <script type="module" crossorigin src="/assets/index-CknIr-WY.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-B8J9-amr.css">
   </head>
   <body>
     <div id="root"></div>

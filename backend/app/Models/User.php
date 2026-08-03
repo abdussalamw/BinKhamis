@@ -38,9 +38,32 @@ class User extends Authenticatable
         'token_expires_at',
         'token_version',
         'school_id',
+
+        // Unified Profile Fields
+        'identity_type',
+        'national_id',
+        'passport_number',
+        'place_of_birth',
+        'birth_date',
+        'status',
+        'academic_stage',
+        'grade_level',
+        'memorization_amount',
+        'neighborhood',
+        'school_name',
+        'guardian_id',
+        'secondary_guardian_id',
+        'specialization',
+        'bank_name',
+        'bank_account_number',
+        'academic_qualification',
+        'graduation_year',
+        'university',
+        'quran_ijazat',
+        'basic_salary',
     ];
 
-    protected $appends = ['active_profile'];
+    protected $appends = ['active_profile', 'student_profile', 'teacher_profile', 'profile'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -66,6 +89,9 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
             'token_expires_at' => 'datetime',
+            'birth_date' => 'date',
+            'quran_ijazat' => 'array',
+            'basic_salary' => 'decimal:2',
         ];
     }
 
@@ -83,33 +109,34 @@ class User extends Authenticatable
         };
     }
 
-    public function profile(): HasOne
+    public function guardian()
     {
-        return $this->hasOne(Profile::class);
+        return $this->belongsTo(Guardian::class, 'guardian_id');
     }
 
-    public function studentProfile(): HasOne
+    public function secondaryGuardian()
     {
-        return $this->hasOne(StudentProfile::class);
+        return $this->belongsTo(Guardian::class, 'secondary_guardian_id');
     }
 
-    public function teacherProfile(): HasOne
-    {
-        return $this->hasOne(TeacherProfile::class);
-    }
-
-    /**
-     * Helper to get the correct profile based on role
-     */
     public function getActiveProfileAttribute()
     {
-        if ($this->role === 'student') {
-            return $this->studentProfile;
-        }
-        if (in_array($this->role, ['teacher', 'admin', 'supervisor'])) {
-            return $this->teacherProfile;
-        }
-        return $this->profile;
+        return $this;
+    }
+
+    public function getStudentProfileAttribute()
+    {
+        return $this;
+    }
+
+    public function getTeacherProfileAttribute()
+    {
+        return $this;
+    }
+
+    public function getProfileAttribute()
+    {
+        return $this;
     }
 
     public function circles(): HasMany
@@ -125,5 +152,20 @@ class User extends Authenticatable
     public function enrollments(): HasMany
     {
         return $this->hasMany(Enrollment::class, 'student_id');
+    }
+
+    public function enrollmentHistories(): HasMany
+    {
+        return $this->hasMany(EnrollmentHistory::class, 'student_id');
+    }
+
+    public function teacherLeaves(): HasMany
+    {
+        return $this->hasMany(TeacherLeave::class, 'teacher_id');
+    }
+
+    public function evaluations(): HasMany
+    {
+        return $this->hasMany(Evaluation::class, 'teacher_id');
     }
 }

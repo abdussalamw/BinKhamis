@@ -15,10 +15,10 @@ class StaffController extends Controller
      */
     public function index()
     {
+        // FIX: added pagination for scalability (D1 was only applied to students)
         $staff = User::whereIn('role', ['owner', 'admin', 'teacher', 'manager', 'supervisor'])
-            ->with('teacherProfile')
             ->latest()
-            ->get();
+            ->paginate(50);
             
         return response()->json($staff);
     }
@@ -59,18 +59,15 @@ class StaffController extends Controller
                 'role' => $validated['role'],
                 'password' => $validated['password'] ? bcrypt($validated['password']) : null,
                 'is_active' => true,
-            ]);
-
-            $user->teacherProfile()->create([
                 'bank_account_number' => $validated['bank_account_number'] ?? null,
                 'specialization' => $validated['specialization'] ?? null,
-                'metadata' => ['qualification' => $validated['qualification'] ?? null],
+                'academic_qualification' => $validated['qualification'] ?? null,
             ]);
 
             // Assign Spatie Role
             $user->assignRole($validated['role']);
 
-            return response()->json($user->load('teacherProfile'), 201);
+            return response()->json($user, 201);
         });
     }
 
@@ -79,9 +76,19 @@ class StaffController extends Controller
      */
     public function show(string $id)
     {
-        $member = User::whereIn('role', ['admin', 'teacher', 'manager'])
-            ->with('teacherProfile')
-            ->findOrFail($id);
+        // FIX: only owner can bypass school scope, maintaining tenant isolation
+        $currentUser = auth()->user();
+        $query = User::whereIn('role', ['admin', 'teacher', 'manager', 'supervisor', 'owner']);
+        
+        if ($currentUser && $currentUser->role === 'owner') {
+            $query->withoutGlobalScope('school');
+        }
+
+        $member = $query->find($id);
+
+        if (!$member) {
+            return response()->json(['message' => 'عذراً، العضو غير موجود'], 404);
+        }
             
         return response()->json($member);
     }
@@ -91,13 +98,25 @@ class StaffController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $user = User::whereIn('role', ['admin', 'teacher', 'manager'])->findOrFail($id);
+        // FIX: only owner can bypass school scope, maintaining tenant isolation
+        $currentUser = auth()->user();
+        $query = User::whereIn('role', ['admin', 'teacher', 'manager', 'supervisor', 'owner']);
+        
+        if ($currentUser && $currentUser->role === 'owner') {
+            $query->withoutGlobalScope('school');
+        }
+
+        $user = $query->find($id);
+
+        if (!$user) {
+            return response()->json(['message' => 'عذراً، العضو غير موجود'], 404);
+        }
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|email|unique:users,email,'.$user->id,
             'phone' => 'sometimes|required|string',
-            'role' => 'sometimes|required|in:admin,teacher,manager',
+            'role' => 'sometimes|required|in:admin,teacher,manager,supervisor',
             'is_active' => 'sometimes|boolean',
             'bank_account_number' => 'nullable|string',
             'specialization' => 'nullable|string',
@@ -105,20 +124,20 @@ class StaffController extends Controller
         ]);
 
         DB::transaction(function() use ($user, $validated) {
-            $user->update(array_intersect_key($validated, array_flip(['name', 'email', 'phone', 'role', 'is_active'])));
-            
-            $profileData = array_intersect_key($validated, array_flip([
-                'bank_account_number', 'specialization', 'qualification'
+            $updateData = array_intersect_key($validated, array_flip([
+                'name', 'email', 'phone', 'role', 'is_active', 'bank_account_number', 'specialization'
             ]));
-            
-            if ($user->teacherProfile) {
-                $user->teacherProfile->update($profileData);
-            } else {
-                $user->teacherProfile()->create($profileData);
+            if (isset($validated['qualification'])) {
+                $updateData['academic_qualification'] = $validated['qualification'];
+            }
+            $user->update($updateData);
+
+            if (isset($validated['role'])) {
+                $user->syncRoles([$validated['role']]);
             }
         });
 
-        return response()->json($user->load('teacherProfile'));
+        return response()->json($user);
     }
 
     /**
@@ -145,7 +164,10 @@ class StaffController extends Controller
             return response()->json(['message' => 'لا يمكن حذف المعلم لأنه مرتبط بحلقة نشطة. يرجى تغيير معلم الحلقة أولاً.'], 422);
         }
 
-        $user->teacherProfile()->delete();
+        // FIX: teacherProfile() relation removed after profiles merge into users table
+        // Delete related evaluations and leaves before deleting the user
+        \App\Models\Evaluation::where('teacher_id', $user->id)->delete();
+        \App\Models\TeacherLeave::where('teacher_id', $user->id)->delete();
         $user->delete();
 
         return response()->json(['message' => 'تم حذف العضو بنجاح']);

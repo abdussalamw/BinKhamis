@@ -4,14 +4,17 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
+// FIX: use __DIR__ for relative paths instead of hardcoded absolute paths
+$basePath = __DIR__;
+
 // Determine if the application is in maintenance mode...
-if (file_exists($maintenance = '/home/user/web/hpro.3ezit.com/repo/backend/storage/framework/maintenance.php')) {
+if (file_exists($maintenance = $basePath . '/storage/framework/maintenance.php')) {
     require $maintenance;
 }
 
 // Register the Composer autoloader...
-require '/home/user/web/hpro.3ezit.com/repo/backend/vendor/autoload.php';
+require $basePath . '/vendor/autoload.php';
 
 // Bootstrap Laravel and handle the request...
-(require_once '/home/user/web/hpro.3ezit.com/repo/backend/bootstrap/app.php')
+(require_once $basePath . '/bootstrap/app.php')
     ->handleRequest(Request::capture());

@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AcademicTermController;
 use App\Http\Controllers\Api\SuperAdminController;
 use App\Http\Controllers\Api\SchoolController;
+use App\Http\Controllers\Api\ProgressController;
 
 Route::middleware('tenant')->group(function() {
     // Auth Public Routes (with rate limiting for L2 security)
@@ -58,6 +59,8 @@ Route::middleware('tenant')->group(function() {
             Route::post('staff', [StaffController::class, 'store']);
             Route::patch('staff/{id}/toggle-status', [StaffController::class, 'toggleStatus']);
             Route::post('import/excel', [ImportController::class, 'importFromJSON']);
+            Route::get('students/{id}/progress', [ProgressController::class, 'index']);
+            Route::post('students/{id}/progress', [ProgressController::class, 'store']);
             
             Route::prefix('whatsapp')->group(function () {
                 Route::get('status', [WhatsAppController::class, 'getStatus']);
@@ -77,7 +80,8 @@ Route::middleware('tenant')->group(function() {
         });
  
         // General Reports (protected - admin/supervisor/owner only)
-        Route::middleware('role:admin,supervisor,superadmin,owner')->group(function () {
+        // FIX: added throttle:30,1 to prevent abuse of heavy report endpoints
+        Route::middleware('role:admin,supervisor,superadmin,owner', 'throttle:30,1')->group(function () {
             Route::get('reports/student/{id}', [ReportsController::class, 'studentReport']);
             Route::get('reports/circle/{id}', [ReportsController::class, 'circleReport']);
             Route::get('stats/attendance-chart', [StatsController::class, 'attendanceChart']);

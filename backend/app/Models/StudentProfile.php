@@ -24,16 +24,17 @@ class StudentProfile extends Model
         'current_level',
         'memorization_method',
         'program',
-        'parent_phone_1',
-        'parent_relation_1',
-        'parent_phone_2',
-        'parent_relation_2',
         'student_phone',
         'enrollment_semester',
         'studied_semesters',
         'completion_year',
         'end_semester',
         'end_reason',
+        'passport_number',
+        'place_of_birth',
+        'identity_type',
+        'status',
+        'guardian_id',
         'profile_picture',
         'metadata'
     ];
@@ -47,5 +48,10 @@ class StudentProfile extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function guardian()
+    {
+        return $this->belongsTo(Guardian::class, 'guardian_id');
     }
 }

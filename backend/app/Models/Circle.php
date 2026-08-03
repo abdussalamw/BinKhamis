@@ -14,6 +14,9 @@ class Circle extends Model
     protected $fillable = [
         'id',
         'name',
+        'location',
+        'schedule',
+        'capacity',
         'teacher_id',
         'description',
         'max_students',
@@ -34,8 +37,18 @@ class Circle extends Model
             ->withPivot('enrolled_at', 'status');
     }
 
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class, 'circle_id');
+    }
+
+    public function term()
+    {
+        return $this->belongsTo(AcademicTerm::class, 'academic_term_id');
+    }
+
     public function academicTerm()
     {
-        return $this->belongsTo(AcademicTerm::class);
+        return $this->belongsTo(AcademicTerm::class, 'academic_term_id');
     }
 }

@@ -40,9 +40,11 @@ const ProgressTracking: React.FC = () => {
 
   const fetchStudents = async () => {
     try {
-      const response = await axios.get('/students');
-      setStudents(response.data);
-      if (response.data.length > 0) setSelectedStudent(response.data[0].id);
+      const response = await axios.get('/students?per_page=100');
+      // Handle pagination object if present
+      const data = response.data.data || response.data;
+      setStudents(data);
+      if (data.length > 0) setSelectedStudent(data[0].id);
     } catch (error) {
       console.error('Error:', error);
     }
@@ -96,7 +98,7 @@ const ProgressTracking: React.FC = () => {
               onChange={(e) => setSelectedStudent(e.target.value)}
             >
               {students.map(s => (
-                <option key={s.id} value={s.id}>{s.full_name}</option>
+                <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
             <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-primary" />
@@ -113,49 +115,49 @@ const ProgressTracking: React.FC = () => {
       </div>
 
       {showAddForm && (
-        <div className="glass-card rounded-3xl p-8 border-2 border-primary/20 animate-in slide-in-from-top duration-500">
-          <div className="mb-6 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                  <Book size={20} />
+        <div className="glass-card rounded-2xl p-6 border-2 border-primary/20 animate-in slide-in-from-top duration-500">
+          <div className="mb-4 flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <Book size={16} />
               </div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-white">تسجيل إنجاز جديد للطالب</h3>
+              <h3 className="text-lg font-black text-slate-800 dark:text-white">تسجيل إنجاز جديد للطالب</h3>
           </div>
-          <form onSubmit={handleAddProgress} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <form onSubmit={handleAddProgress} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1">
-              <label className="mb-2 block text-sm font-bold text-slate-500">اسم السورة</label>
+              <label className="mb-1.5 block text-xs font-bold text-slate-500">اسم السورة</label>
               <input
                 type="text"
-                className="w-full rounded-2xl bg-slate-50 border-none py-4 px-6 font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
+                className="w-full rounded-xl bg-slate-50 border-none py-3 px-4 text-sm font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
                 value={newRecord.surah_name}
                 onChange={e => setNewRecord({...newRecord, surah_name: e.target.value})}
                 required
                 placeholder="مثال: البقرة"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-500">من آية</label>
+                <label className="mb-1.5 block text-xs font-bold text-slate-500">من آية</label>
                 <input
                   type="number"
-                  className="w-full rounded-2xl bg-slate-50 border-none py-4 px-6 font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
+                  className="w-full rounded-xl bg-slate-50 border-none py-3 px-4 text-sm font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
                   value={newRecord.start_verse}
                   onChange={e => setNewRecord({...newRecord, start_verse: parseInt(e.target.value)})}
                 />
               </div>
               <div>
-                <label className="mb-2 block text-sm font-bold text-slate-500">إلى آية</label>
+                <label className="mb-1.5 block text-xs font-bold text-slate-500">إلى آية</label>
                 <input
                   type="number"
-                  className="w-full rounded-2xl bg-slate-50 border-none py-4 px-6 font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
+                  className="w-full rounded-xl bg-slate-50 border-none py-3 px-4 text-sm font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
                   value={newRecord.end_verse}
                   onChange={e => setNewRecord({...newRecord, end_verse: parseInt(e.target.value)})}
                 />
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-bold text-slate-500">تقييم الحفظ</label>
+              <label className="mb-1.5 block text-xs font-bold text-slate-500">تقييم الحفظ</label>
               <select
-                className="w-full rounded-2xl bg-slate-50 border-none py-4 px-6 font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
+                className="w-full rounded-xl bg-slate-50 border-none py-3 px-4 text-sm font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
                 value={newRecord.quality_rating}
                 onChange={e => setNewRecord({...newRecord, quality_rating: e.target.value as any})}
               >
@@ -165,72 +167,72 @@ const ProgressTracking: React.FC = () => {
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="mb-2 block text-sm font-bold text-slate-500">ملاحظات معلم الحلقة</label>
+              <label className="mb-1.5 block text-xs font-bold text-slate-500">ملاحظات معلم الحلقة</label>
               <input
                 type="text"
-                className="w-full rounded-2xl bg-slate-50 border-none py-4 px-6 font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
+                className="w-full rounded-xl bg-slate-50 border-none py-3 px-4 text-sm font-bold outline-none ring-1 ring-slate-200 focus:ring-2 focus:ring-primary dark:bg-slate-900/50 dark:ring-slate-700"
                 value={newRecord.notes}
                 onChange={e => setNewRecord({...newRecord, notes: e.target.value})}
                 placeholder="مثال: يحتاج تركيز على أحكام المد"
               />
             </div>
-            <div className="md:col-span-1 flex items-end justify-end gap-3">
-              <button type="button" onClick={() => setShowAddForm(false)} className="py-4 px-8 font-bold text-slate-400 hover:text-slate-600 transition-colors">إلغاء</button>
-              <button type="submit" className="py-4 px-10 bg-primary text-white rounded-2xl font-black shadow-lg shadow-primary/30 active:scale-95 transition-all">حفظ الإنجاز</button>
+            <div className="md:col-span-1 flex items-end justify-end gap-2">
+              <button type="button" onClick={() => setShowAddForm(false)} className="py-3 px-6 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">إلغاء</button>
+              <button type="submit" className="py-3 px-8 text-sm bg-primary text-white rounded-xl font-black shadow-md shadow-primary/30 active:scale-95 transition-all">حفظ الإنجاز</button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="glass-card rounded-3xl overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
         <div className="max-w-full overflow-x-auto">
           <table className="w-full table-auto">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-slate-800/50 text-right">
-                <th className="py-6 px-8 font-black text-slate-800 dark:text-white">السورة</th>
-                <th className="py-6 px-8 font-black text-slate-800 dark:text-white">المقدار المسجل</th>
-                <th className="py-6 px-8 font-black text-slate-800 dark:text-white">التاريخ</th>
-                <th className="py-6 px-8 font-black text-slate-800 dark:text-white">التقييم</th>
-                <th className="py-6 px-8 font-black text-slate-800 dark:text-white">ملاحظات</th>
+                <th className="py-4 px-6 text-sm font-black text-slate-800 dark:text-white">السورة</th>
+                <th className="py-4 px-6 text-sm font-black text-slate-800 dark:text-white">المقدار المسجل</th>
+                <th className="py-4 px-6 text-sm font-black text-slate-800 dark:text-white">التاريخ</th>
+                <th className="py-4 px-6 text-sm font-black text-slate-800 dark:text-white">التقييم</th>
+                <th className="py-4 px-6 text-sm font-black text-slate-800 dark:text-white">ملاحظات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
-                <tr><td colSpan={5} className="py-20 text-center font-bold text-slate-400">جاري تحميل سجلات الإنجاز...</td></tr>
+                <tr><td colSpan={5} className="py-12 text-center text-sm font-bold text-slate-400">جاري تحميل سجلات الإنجاز...</td></tr>
               ) : records.length === 0 ? (
-                <tr><td colSpan={5} className="py-20 text-center font-bold text-slate-400">لم يتم تسجيل أي إنجاز لهذا الطالب بعد</td></tr>
+                <tr><td colSpan={5} className="py-12 text-center text-sm font-bold text-slate-400">لم يتم تسجيل أي إنجاز لهذا الطالب بعد</td></tr>
               ) : (
                 records.map((record) => (
                   <tr key={record.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all group">
-                    <td className="py-5 px-8">
+                    <td className="py-3 px-6">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                            <Book size={20} />
+                        <div className="h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
+                            <Book size={16} />
                         </div>
-                        <p className="font-black text-slate-800 dark:text-white">{record.surah_name}</p>
+                        <p className="text-sm font-black text-slate-800 dark:text-white">{record.surah_name}</p>
                       </div>
                     </td>
-                    <td className="py-5 px-8">
-                      <div className="flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-400">
-                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">من {record.start_verse}</span>
+                    <td className="py-3 px-6">
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400">
+                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">من {record.start_verse}</span>
                         <span>إلى</span>
-                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">{record.end_verse}</span>
+                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{record.end_verse}</span>
                       </div>
                     </td>
-                    <td className="py-5 px-8">
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-                        <Clock size={14} />
+                    <td className="py-3 px-6">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                        <Clock size={12} />
                         {new Date(record.date).toLocaleDateString('ar-SA')}
                       </div>
                     </td>
-                    <td className="py-5 px-8">
-                      <span className={`inline-flex items-center gap-1.5 rounded-xl bg-opacity-10 py-2 px-4 text-xs font-black ${getRatingColor(record.quality_rating)}`}>
-                        <CheckCircle2 size={14} />
+                    <td className="py-3 px-6">
+                      <span className={`inline-flex items-center gap-1 rounded-lg bg-opacity-10 py-1.5 px-3 text-[10px] font-black ${getRatingColor(record.quality_rating)}`}>
+                        <CheckCircle2 size={12} />
                         {record.quality_rating}
                       </span>
                     </td>
-                    <td className="py-5 px-8">
-                      <p className="text-sm font-bold text-slate-500 dark:text-slate-400 italic">"{record.notes || 'لا توجد ملاحظات'}"</p>
+                    <td className="py-3 px-6">
+                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 italic">"{record.notes || 'لا توجد ملاحظات'}"</p>
                     </td>
                   </tr>
                 ))

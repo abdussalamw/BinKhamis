@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { 
-  ChevronLeft, Search, 
-  User, 
-  Phone, 
-  MapPin, 
-  Shield, GraduationCap, School, Book
+  ChevronLeft, User, Phone, MapPin, 
+  Shield, GraduationCap, School, Book,
+  CreditCard, Users, Save, Globe, Activity
 } from 'lucide-react';
 
 const StudentForm: React.FC = () => {
@@ -21,13 +19,23 @@ const StudentForm: React.FC = () => {
     name: '',
     email: '',
     phone: '',
+    identity_type: 'national_id',
     identity_number: '',
+    passport_number: '',
+    place_of_birth: '',
+    status: 'active',
     academic_stage: '',
     grade_level: '',
     school_name: '',
     neighborhood: '',
     birth_date: '',
     memorization_amount: '',
+    guardian_name: '',
+    guardian_phone: '',
+    guardian_relation: 'أب',
+    secondary_guardian_name: '',
+    secondary_guardian_phone: '',
+    secondary_guardian_relation: 'أم',
     is_active: true,
   });
 
@@ -40,18 +48,30 @@ const StudentForm: React.FC = () => {
       const response = await api.get(`/students/${id}`);
       const data = response.data;
       const profile = data.student_profile || data.active_profile || data.profile || {};
+      const guardian = data.guardian || profile.guardian || {};
+      const secGuardian = data.secondary_guardian || profile.secondary_guardian || {};
       
       setFormData({
         name: data.name || '',
         email: data.email || '',
         phone: data.phone || '',
-        identity_number: profile.identity_number || '',
-        academic_stage: profile.academic_stage || '',
-        grade_level: profile.grade_level || '',
-        school_name: profile.school_name || '',
-        neighborhood: profile.neighborhood || '',
-        birth_date: profile.birth_date || '',
-        memorization_amount: profile.memorization_amount || '',
+        identity_type: data.identity_type || profile.identity_type || 'national_id',
+        identity_number: data.national_id || profile.national_id || profile.identity_number || '',
+        passport_number: data.passport_number || profile.passport_number || '',
+        place_of_birth: data.place_of_birth || profile.place_of_birth || '',
+        status: data.status || profile.status || 'active',
+        academic_stage: data.academic_stage || profile.academic_stage || '',
+        grade_level: data.grade_level || profile.grade_level || '',
+        school_name: data.school_name || profile.school_name || '',
+        neighborhood: data.neighborhood || profile.neighborhood || '',
+        birth_date: data.birth_date ? data.birth_date.split('T')[0] : '',
+        memorization_amount: data.memorization_amount || profile.current_level || '',
+        guardian_name: guardian.full_name || '',
+        guardian_phone: guardian.phone_number || '',
+        guardian_relation: guardian.relation || 'أب',
+        secondary_guardian_name: secGuardian.full_name || '',
+        secondary_guardian_phone: secGuardian.phone_number || '',
+        secondary_guardian_relation: secGuardian.relation || 'أم',
         is_active: data.is_active ?? true,
       });
     } catch (error) {
@@ -71,9 +91,10 @@ const StudentForm: React.FC = () => {
         await api.post('/students', formData);
       }
       navigate('/students');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving student:', error);
-      alert('حدث خطأ أثناء حفظ بيانات الطالب');
+      const msg = error.response?.data?.message || 'حدث خطأ أثناء حفظ بيانات الطالب';
+      alert(msg);
     } finally {
       setSaving(false);
     }
@@ -91,9 +112,9 @@ const StudentForm: React.FC = () => {
           </div>
           <div>
             <h1 className="text-xl font-black text-slate-800 dark:text-white">
-              {isEdit ? `تعديل ملف: ${formData.name}` : 'إضافة طالب جديد للمجمع'}
+              {isEdit ? `تعديل ملف الطالب: ${formData.name}` : 'إضافة طالب جديد للمجمع'}
             </h1>
-            <p className="text-xs font-bold text-slate-400">أدخل البيانات الأكاديمية والشخصية للطالب</p>
+            <p className="text-xs font-bold text-slate-400">أدخل البيانات الأساسية، الأكاديمية، وبيانات ولي الأمر</p>
           </div>
         </div>
         <button onClick={() => navigate('/students')} className="p-3 rounded-xl bg-slate-50 text-slate-400 hover:bg-slate-100 dark:bg-slate-800 transition-all">
@@ -106,11 +127,11 @@ const StudentForm: React.FC = () => {
         <div className="glass-card p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-white/10">
           <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
             <Shield size={20} className="text-indigo-500" />
-            المعلومات الشخصية
+            المعلومات الشخصية والهوية
           </h3>
           
           <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">اسم الطالب الرباعي</label>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">اسم الطالب الرباعي *</label>
             <input 
               type="text" required
               className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
@@ -121,12 +142,51 @@ const StudentForm: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">رقم الهوية</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">نوع الهوية *</label>
+              <select 
+                className="w-full px-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                value={formData.identity_type}
+                onChange={e => setFormData({...formData, identity_type: e.target.value})}
+              >
+                <option value="national_id">هوية وطنية</option>
+                <option value="iqama">هوية مقيم</option>
+                <option value="passport">رقم جواز</option>
+                <option value="border_number">رقم حدود</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">رقم الهوية / المقيم / الحدود *</label>
               <input 
-                type="text"
+                type="text" required
+                placeholder="10 أو 14 رقم"
                 className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
                 value={formData.identity_number}
                 onChange={e => setFormData({...formData, identity_number: e.target.value})}
+              />
+            </div>
+          </div>
+
+          {formData.identity_type === 'passport' && (
+            <div className="space-y-2 animate-in fade-in duration-300">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">رقم الجواز</label>
+              <input 
+                type="text"
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                value={formData.passport_number}
+                onChange={e => setFormData({...formData, passport_number: e.target.value})}
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">مكان الميلاد</label>
+              <input 
+                type="text"
+                placeholder="مثال: المدينة المنورة"
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                value={formData.place_of_birth}
+                onChange={e => setFormData({...formData, place_of_birth: e.target.value})}
               />
             </div>
             <div className="space-y-2">
@@ -142,9 +202,9 @@ const StudentForm: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">رقم الجوال</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">جوال الطالب</label>
               <input 
-                type="text" required
+                type="text"
                 className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all text-left"
                 value={formData.phone}
                 onChange={e => setFormData({...formData, phone: e.target.value})}
@@ -162,62 +222,160 @@ const StudentForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Academic Info */}
-        <div className="glass-card p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-white/10">
-          <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-            <GraduationCap size={20} className="text-emerald-500" />
-            المسار التعليمي والقرآني
-          </h3>
+        {/* Guardian Info & Academic Path */}
+        <div className="space-y-8">
+          {/* Guardian Info Card */}
+          <div className="glass-card p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-white/10">
+            <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <Users size={20} className="text-teal-500" />
+              بيانات ولي الأمر
+            </h3>
 
-          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">المرحلة الدراسية</label>
-              <select 
-                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
-                value={formData.academic_stage}
-                onChange={e => setFormData({...formData, academic_stage: e.target.value})}
-              >
-                <option value="">اختر المرحلة...</option>
-                <option value="الابتدائية">الابتدائية</option>
-                <option value="المتوسطة">المتوسطة</option>
-                <option value="الثانوية">الثانوية</option>
-                <option value="الجامعية">الجامعية</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">الصف الدراسي</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">اسم ولي الأمر</label>
               <input 
                 type="text"
-                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
-                value={formData.grade_level}
-                onChange={e => setFormData({...formData, grade_level: e.target.value})}
+                placeholder="اسم ولي أمر الطالب"
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-teal-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                value={formData.guardian_name}
+                onChange={e => setFormData({...formData, guardian_name: e.target.value})}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">جوال ولي الأمر</label>
+                <input 
+                  type="text"
+                  placeholder="05xxxxxxxx"
+                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-teal-600/20 font-bold text-slate-700 dark:text-white transition-all text-left"
+                  value={formData.guardian_phone}
+                  onChange={e => setFormData({...formData, guardian_phone: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">صلة القرابة</label>
+                <select 
+                  className="w-full px-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-teal-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                  value={formData.guardian_relation}
+                  onChange={e => setFormData({...formData, guardian_relation: e.target.value})}
+                >
+                  <option value="أب">أب</option>
+                  <option value="أم">أم</option>
+                  <option value="أخ">أخ</option>
+                  <option value="عم">عم</option>
+                  <option value="خال">خال</option>
+                  <option value="ولي أمر">ولي أمر آخر</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">اسم المدرسة</label>
-            <div className="relative">
-              <School size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
+          {/* Secondary Guardian Info Card */}
+          <div className="glass-card p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-white/10">
+            <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <Users size={20} className="text-cyan-500" />
+              معلومات ولي الأمر الثاني (إضافي)
+            </h3>
+
+            <div className="space-y-2">
+              <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">اسم ولي الأمر الثاني</label>
               <input 
                 type="text"
-                className="w-full pr-12 pl-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
-                value={formData.school_name}
-                onChange={e => setFormData({...formData, school_name: e.target.value})}
+                placeholder="مثال: الأم أو الأخ"
+                className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-cyan-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                value={formData.secondary_guardian_name}
+                onChange={e => setFormData({...formData, secondary_guardian_name: e.target.value})}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">جوال ولي الأمر الثاني</label>
+                <input 
+                  type="text"
+                  placeholder="05xxxxxxxx"
+                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-cyan-600/20 font-bold text-slate-700 dark:text-white transition-all text-left"
+                  value={formData.secondary_guardian_phone}
+                  onChange={e => setFormData({...formData, secondary_guardian_phone: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">صلة القرابة 2</label>
+                <select 
+                  className="w-full px-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-cyan-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                  value={formData.secondary_guardian_relation}
+                  onChange={e => setFormData({...formData, secondary_guardian_relation: e.target.value})}
+                >
+                  <option value="أم">أم</option>
+                  <option value="أب">أب</option>
+                  <option value="أخ">أخ</option>
+                  <option value="أخت">أخت</option>
+                  <option value="عم">عم</option>
+                  <option value="خال">خال</option>
+                  <option value="ولي أمر">ولي أمر آخر</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">مقدار الحفظ عند التسجيل</label>
-            <div className="relative">
-              <Book size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input 
-                type="text"
-                className="w-full pr-12 pl-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
-                value={formData.memorization_amount}
-                onChange={e => setFormData({...formData, memorization_amount: e.target.value})}
-              />
+          {/* Academic Info Card */}
+          <div className="glass-card p-8 rounded-[2.5rem] space-y-6 shadow-xl border border-white/10">
+            <h3 className="text-lg font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+              <GraduationCap size={20} className="text-emerald-500" />
+              المسار التعليمي والقرآني
+            </h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">المرحلة الدراسية</label>
+                <select 
+                  className="w-full px-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                  value={formData.academic_stage}
+                  onChange={e => setFormData({...formData, academic_stage: e.target.value})}
+                >
+                  <option value="">اختر المرحلة...</option>
+                  <option value="الابتدائية">الابتدائية</option>
+                  <option value="المتوسطة">المتوسطة</option>
+                  <option value="الثانوية">الثانوية</option>
+                  <option value="الجامعية">الجامعية</option>
+                  <option value="خريج / موظف">خريج / موظف</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">الصف / المستوى</label>
+                <input 
+                  type="text"
+                  placeholder="مثال: الأول متوسط"
+                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                  value={formData.grade_level}
+                  onChange={e => setFormData({...formData, grade_level: e.target.value})}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">مقدار الحفظ الحالية</label>
+                <input 
+                  type="text"
+                  placeholder="مثال: 5 أجزاء"
+                  className="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                  value={formData.memorization_amount}
+                  onChange={e => setFormData({...formData, memorization_amount: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2">حالة القيد في المجمع</label>
+                <select 
+                  className="w-full px-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border-none outline-none ring-2 ring-transparent focus:ring-indigo-600/20 font-bold text-slate-700 dark:text-white transition-all"
+                  value={formData.status}
+                  onChange={e => setFormData({...formData, status: e.target.value})}
+                >
+                  <option value="active">نشط</option>
+                  <option value="discontinued">منقطع</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -234,8 +392,8 @@ const StudentForm: React.FC = () => {
                   <Shield size={24} />
                 </button>
                 <div>
-                  <p className="text-sm font-black text-slate-800 dark:text-white">حالة الحساب</p>
-                  <p className="text-[10px] font-bold text-slate-400">{formData.is_active ? 'الطالب نشط في المجمع' : 'الحساب معطل حالياً'}</p>
+                  <p className="text-sm font-black text-slate-800 dark:text-white">تفعيل الحساب بالنظام</p>
+                  <p className="text-[10px] font-bold text-slate-400">{formData.is_active ? 'الحساب نَشِط ويستطيع التفاعل' : 'الحساب معطل حالياً'}</p>
                 </div>
               </div>
            </div>

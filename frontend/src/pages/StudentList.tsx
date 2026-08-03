@@ -3,7 +3,7 @@ import axios from '../services/api';
 import { 
   Search, Filter, MoreHorizontal, Eye, Edit, 
   UserPlus, FileDown, UserCheck, Users, 
-  MapPin, GraduationCap, ChevronDown
+  MapPin, GraduationCap, ChevronDown, UserX, Activity
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -12,13 +12,24 @@ interface StudentData {
   name: string;
   phone: string;
   profile: {
-    national_id: string | null;
-    academic_stage: string | null;
-    grade_level: string | null;
-    program: string | null;
-    neighborhood: string | null;
+    national_id?: string | null;
+    identity_number?: string | null;
+    passport_number?: string | null;
+    identity_type?: string | null;
+    status?: string | null;
+    academic_stage?: string | null;
+    grade_level?: string | null;
+    program?: string | null;
+    current_level?: string | null;
+    neighborhood?: string | null;
+    guardian?: {
+      full_name?: string | null;
+      phone_number?: string | null;
+      relation?: string | null;
+    } | null;
   } | null;
   enrollments_count?: number; 
+  enrollments?: any[];
 }
 
 const StudentList: React.FC = () => {
@@ -32,35 +43,39 @@ const StudentList: React.FC = () => {
     grade_level: '',
     program: '',
     neighborhood: '',
-    only_enrolled: true, 
+    status: '',
+    only_enrolled: false, 
   });
+  // FIX: add pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    fetchStudents();
-  }, []);
+    fetchStudents(currentPage);
+  }, [currentPage]);
 
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  let user: any = null;
+  try { user = JSON.parse(localStorage.getItem('user') || 'null'); } catch {}
   const role = user?.role || 'student';
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (page = 1) => {
     setLoading(true);
     try {
-      const response = await axios.get('/students');
-      let data = response.data;
+      // FIX: use server-side pagination, removed client-side circle_id/allowed_circles filtering
+      const response = await axios.get(`/students?per_page=50&page=${page}`);
+      const rawData = response.data;
+      let data = rawData.data || (Array.isArray(rawData) ? rawData : []);
       
-      if (role === 'teacher' && user?.circle_id) {
-        data = data.filter((s: any) => s.enrollments?.some((e: any) => e.circle_id === user.circle_id));
-      } else if (role === 'supervisor' && user?.allowed_circles?.length > 0) {
-        data = data.filter((s: any) => s.enrollments?.some((e: any) => user.allowed_circles.includes(e.circle_id)));
+      // FIX: set pagination metadata
+      if (rawData.current_page) {
+        setCurrentPage(rawData.current_page);
+        setLastPage(rawData.last_page || 1);
+        setTotal(rawData.total || data.length);
       }
       
-      const mappedData = data.map((s: any) => ({
-        ...s,
-        profile: s.student_profile || s.active_profile || s.profile || {}
-      }));
-      
-      setStudents(mappedData);
+      // Data comes directly from users table — no profile mapping needed
+      setStudents(data);
     } catch (error) {
       console.error('Error fetching students:', error);
     } finally {
@@ -68,17 +83,21 @@ const StudentList: React.FC = () => {
     }
   };
 
-  const filteredStudents = (students || []).filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (student.profile?.national_id?.includes(searchTerm));
+  const filteredStudents = (students || []).filter((student: any) => {
+    const idNum = String(student.national_id || student.passport_number || '');
+    const guardianPhone = String(student.guardian?.phone_number || '');
+    const matchesSearch = (student.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (idNum.length > 0 && idNum.includes(searchTerm)) ||
+                         (guardianPhone.length > 0 && guardianPhone.includes(searchTerm));
     
-    const matchesStage = !filters.academic_stage || student.profile?.academic_stage === filters.academic_stage;
-    const matchesGrade = !filters.grade_level || student.profile?.grade_level === filters.grade_level;
-    const matchesProgram = !filters.program || student.profile?.program === filters.program;
-    const matchesNeighborhood = !filters.neighborhood || student.profile?.neighborhood === filters.neighborhood;
+    const matchesStage = !filters.academic_stage || student.academic_stage === filters.academic_stage;
+    const matchesGrade = !filters.grade_level || student.grade_level === filters.grade_level;
+    const matchesProgram = !filters.program || student.memorization_amount === filters.program;
+    const matchesNeighborhood = !filters.neighborhood || student.neighborhood === filters.neighborhood;
+    const matchesStatus = !filters.status || (student.status || 'active') === filters.status;
     const matchesEnrolled = !filters.only_enrolled || (student.enrollments_count && student.enrollments_count > 0);
 
-    return matchesSearch && matchesStage && matchesGrade && matchesProgram && matchesNeighborhood && matchesEnrolled;
+    return matchesSearch && matchesStage && matchesGrade && matchesProgram && matchesNeighborhood && matchesStatus && matchesEnrolled;
   });
 
   return (
@@ -95,107 +114,130 @@ const StudentList: React.FC = () => {
           <div>
             <h1 className="text-lg font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-2">
                 إدارة الطلاب
-                <div className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase">Active</div>
+                <div className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[9px] font-black uppercase">
+                  {students.length} طالب
+                </div>
             </h1>
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500">إجمالي {filteredStudents.length} طالباً في النظام حالياً</p>
+            <p className="text-xs font-bold text-slate-400">إدارة ملفات الطلاب وسجلات تسجيلهم وأولياء أمورهم</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setShowFilters(!showFilters)}
-            className={`group flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-black transition-all ${showFilters ? 'bg-primary text-white shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 dark:bg-white/5 dark:text-slate-400'}`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs transition-all ${
+              showFilters ? 'bg-primary text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+            }`}
           >
-            <Filter size={14} className={showFilters ? 'animate-pulse' : ''} />
-            تصفية
+            <Filter size={14} />
+            <span>فلترة</span>
           </button>
-          <button className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-[10px] font-black text-slate-500 hover:bg-slate-100 dark:bg-white/5 dark:text-slate-400 transition-all border border-transparent hover:border-slate-200 dark:hover:border-white/10">
-            <FileDown size={14} />
-            تصدير
-          </button>
+
           <button 
             onClick={() => navigate('/students/new')}
-            className="group relative flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-[10px] font-black text-white shadow-sm transition-all hover:scale-[1.02] active:scale-95 overflow-hidden"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs bg-gradient-to-r from-primary to-teal-600 text-white shadow-lg hover:shadow-primary/30 hover:scale-105 transition-all"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
             <UserPlus size={14} />
-            إضافة طالب
+            <span>إضافة طالب جديد</span>
           </button>
         </div>
       </div>
 
-      {/* Advanced Filters Panel */}
+      {/* Filter Options */}
       {showFilters && (
-        <div className="glass-card-premium p-4 grid grid-cols-1 md:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-500 overflow-visible rounded-2xl">
-          <FilterSelect 
-            label="المرحلة التعليمية" 
-            icon={<GraduationCap size={14} className="text-primary"/>}
-            value={filters.academic_stage} 
-            options={['ابتدائي', 'متوسط', 'ثانوي', 'جامعي']}
-            onChange={(val) => setFilters({...filters, academic_stage: val})}
-          />
-          <FilterSelect 
-            label="نوع البرنامج" 
-            icon={<Award size={14} className="text-secondary"/>}
-            value={filters.program} 
-            options={['الصفوة', 'تميز', 'إبداع']}
-            onChange={(val) => setFilters({...filters, program: val})}
-          />
-          <FilterSelect 
-            label="الحي السكني" 
-            icon={<MapPin size={14} className="text-emerald-500"/>}
-            value={filters.neighborhood} 
-            options={Array.from(new Set(students.map(s => s.profile?.neighborhood).filter(Boolean))) as string[]}
-            onChange={(val) => setFilters({...filters, neighborhood: val})}
-          />
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest mr-1">حالة الالتحاق</label>
-            <button 
-              onClick={() => setFilters({...filters, only_enrolled: !filters.only_enrolled})}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg text-[10px] font-black transition-all border ${filters.only_enrolled ? 'bg-emerald-50/50 border-emerald-200/50 text-emerald-600 dark:bg-emerald-500/10 dark:border-emerald-500/20' : 'bg-slate-50 border-transparent text-slate-400 dark:bg-white/5'}`}
+        <div className="glass-card p-4 rounded-2xl grid grid-cols-2 md:grid-cols-5 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div>
+            <label className="text-[10px] font-black text-slate-400 mb-1 block">المرحلة الدراسية</label>
+            <select 
+              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold border-none outline-none"
+              value={filters.academic_stage}
+              onChange={e => setFilters({...filters, academic_stage: e.target.value})}
             >
-              <span className="flex items-center gap-1.5">
-                <UserCheck size={14} />
-                الملتحقون حالياً
-              </span>
-              <div className={`w-2.5 h-2.5 rounded-full border-2 ${filters.only_enrolled ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300'}`}></div>
+              <option value="">جميع المراحل</option>
+              <option value="الابتدائية">الابتدائية</option>
+              <option value="المتوسطة">المتوسطة</option>
+              <option value="الثانوية">الثانوية</option>
+              <option value="الجامعية">الجامعية</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-400 mb-1 block">حالة القيد</label>
+            <select 
+              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold border-none outline-none"
+              value={filters.status}
+              onChange={e => setFilters({...filters, status: e.target.value})}
+            >
+              <option value="">جميع الحالات</option>
+              <option value="active">نشط</option>
+              <option value="discontinued">منقطع</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-black text-slate-400 mb-1 block">الحي السكني</label>
+            <input 
+              type="text" 
+              placeholder="تصفية حسب الحي..."
+              className="w-full p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold border-none outline-none"
+              value={filters.neighborhood}
+              onChange={e => setFilters({...filters, neighborhood: e.target.value})}
+            />
+          </div>
+
+          <div className="flex items-end">
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer pb-2">
+              <input 
+                type="checkbox" 
+                className="rounded text-primary focus:ring-primary h-4 w-4"
+                checked={filters.only_enrolled}
+                onChange={e => setFilters({...filters, only_enrolled: e.target.checked})}
+              />
+              <span>الملتحقين بالحلقات فقط</span>
+            </label>
+          </div>
+
+          <div className="flex items-end">
+            <button 
+              onClick={() => setFilters({ academic_stage: '', grade_level: '', program: '', neighborhood: '', status: '', only_enrolled: false })}
+              className="w-full p-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-xs font-black text-slate-600 dark:text-slate-200 hover:bg-slate-300 transition-all"
+            >
+              إعادة تعيين
             </button>
           </div>
         </div>
       )}
 
-      {/* Modern Search Control */}
-      <div className="relative group max-w-lg px-1">
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-xl blur opacity-0 group-focus-within:opacity-10 transition duration-1000"></div>
-        <div className="relative">
-            <input
-              type="text"
-              placeholder="ابحث بالاسم أو رقم الهوية..."
-              className="w-full rounded-xl border-none bg-white dark:bg-midnight py-2.5 pr-10 pl-4 text-xs font-bold text-slate-700 dark:text-slate-200 outline-none ring-1 ring-slate-100 dark:ring-white/5 focus:ring-primary/20 transition-all shadow-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors" size={14} />
-        </div>
+      {/* Search Input */}
+      <div className="relative">
+        <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        <input 
+          type="text"
+          placeholder="ابحث باسم الطالب، رقم الهوية/الإقامة/الجواز، أو رقم ولي الأمر..."
+          className="w-full pr-12 pl-4 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 font-bold text-xs outline-none focus:ring-2 focus:ring-primary/20 shadow-sm transition-all"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+        />
       </div>
 
-      {/* Premium Data Table */}
-      <div className="glass-card-premium overflow-hidden border-none shadow-sm dark:shadow-none rounded-2xl">
+      {/* Students Table */}
+      <div className="glass-card rounded-3xl overflow-hidden shadow-xl border border-white/10">
         <div className="overflow-x-auto">
           <table className="w-full text-right border-collapse">
             <thead>
-              <tr className="bg-slate-50/50 dark:bg-white/5 border-b border-slate-100 dark:border-white/5">
-                <th className="py-3 px-4 font-black text-slate-400 uppercase text-[9px] tracking-wider">بيانات الطالب</th>
-                <th className="py-3 px-4 font-black text-slate-400 uppercase text-[9px] tracking-wider">المستوى التعليمي</th>
-                <th className="py-3 px-4 font-black text-slate-400 uppercase text-[9px] tracking-wider">المسار</th>
-                <th className="py-3 px-4 font-black text-slate-400 uppercase text-[9px] tracking-wider">حالة القيد</th>
-                <th className="py-3 px-4 font-black text-slate-400 uppercase text-[9px] tracking-wider text-left">إدارة</th>
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                <th className="py-4 px-4">الطالب والهوية</th>
+                <th className="py-4 px-4">المرحلة والصف</th>
+                <th className="py-4 px-4">ولي الأمر</th>
+                <th className="py-4 px-4">الحلقة الحالية</th>
+                <th className="py-4 px-4">الحالة</th>
+                <th className="py-4 px-4 text-left">إجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-white/5">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-bold text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center">
+                  <td colSpan={6} className="py-16 text-center">
                     <div className="relative inline-flex h-8 w-8">
                         <div className="absolute inset-0 rounded-full border-2 border-primary/20"></div>
                         <div className="absolute inset-0 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
@@ -204,129 +246,148 @@ const StudentList: React.FC = () => {
                 </tr>
               ) : filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-16 text-center">
+                  <td colSpan={6} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="h-12 w-12 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-300">
                           <Users size={24} />
                       </div>
                       <div>
-                          <p className="font-black text-slate-400 text-xs">لم يتم العثور على نتائج</p>
-                          <button 
-                            onClick={() => setFilters({ academic_stage: '', grade_level: '', program: '', neighborhood: '', only_enrolled: false })}
-                            className="mt-1 text-primary text-[10px] font-black hover:underline"
-                          >
-                            إعادة تعيين المرشحات
-                          </button>
+                          <p className="font-black text-slate-400 text-xs">لم يتم العثور على نتائج للبحث</p>
                       </div>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors group">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <div className="absolute -inset-1 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <div className="relative h-8 w-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center font-black text-primary text-[10px] shadow-inner group-hover:scale-105 transition-all">
-                                {(student.name || '?').charAt(0)}
-                            </div>
+                filteredStudents.map((student: any) => {
+                  const nationalId = student.profile?.national_id || student.profile?.passport_number || student.profile?.identity_number || student.national_id || 'غير مسجل';
+                  const circleName = student.enrollments?.[0]?.circle?.name;
+                  const isEnrolled = (student.enrollments_count && student.enrollments_count > 0) || !!circleName;
+                  const isDiscontinued = student.profile?.status === 'discontinued';
+                  const guardian = student.profile?.guardian;
+
+                  return (
+                    <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors group">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="relative h-9 w-9 rounded-xl bg-gradient-to-br from-primary/20 to-teal-500/20 flex items-center justify-center font-black text-primary text-xs shadow-inner">
+                              {(student.name || '?').charAt(0)}
+                          </div>
+                          <div>
+                              <h5 className="font-black text-slate-800 dark:text-white text-[11px] group-hover:text-primary transition-colors">{student.name}</h5>
+                              <p className="text-[9px] font-bold text-slate-400 mt-0.5 tracking-wider">
+                                {student.profile?.identity_type === 'passport' ? 'الجواز' : 'الهوية'}: {nationalId}
+                              </p>
+                          </div>
                         </div>
-                        <div>
-                            <h5 className="font-black text-slate-800 dark:text-white text-[11px] group-hover:text-primary transition-colors">{student.name}</h5>
-                            <p className="text-[9px] font-bold text-slate-400 mt-0.5 tracking-wider">{student.profile?.national_id || 'ID UNKNOWN'}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">{student.profile?.academic_stage || 'عام'}</span>
+                          <span className="text-[9px] font-bold text-slate-400">{student.profile?.grade_level || 'غير محدد'}</span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">{student.profile?.academic_stage || 'عام'}</span>
-                        <span className="text-[9px] font-bold text-slate-400">{student.profile?.grade_level || 'غير محدد'}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="inline-flex rounded-lg bg-slate-50 dark:bg-white/5 py-1 px-2.5 text-[9px] font-black text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-white/5">
-                        {student.profile?.program || 'برنامج عام'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      {student.enrollments_count && student.enrollments_count > 0 ? (
-                        <div className="flex items-center gap-1 text-[9px] font-black text-emerald-500">
-                          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                          نشط حالياً
+                      </td>
+                      <td className="py-3 px-4">
+                        {guardian || student.secondary_guardian || student.profile?.secondary_guardian ? (
+                          <div className="flex flex-col text-[10px]">
+                            {guardian && (
+                              <div>
+                                <span className="font-black text-slate-700 dark:text-slate-300">{guardian.full_name} ({guardian.relation || 'ولي أمر'})</span>
+                                <p className="text-[9px] text-teal-600 dark:text-teal-400 font-mono" dir="ltr">{guardian.phone_number}</p>
+                              </div>
+                            )}
+                            {(student.secondary_guardian || student.profile?.secondary_guardian) && (
+                              <div className="mt-1 pt-1 border-t border-slate-100 dark:border-slate-800">
+                                <span className="font-bold text-slate-500">{(student.secondary_guardian || student.profile?.secondary_guardian).full_name} ({(student.secondary_guardian || student.profile?.secondary_guardian).relation || 'ولي أمر 2'})</span>
+                                <p className="text-[9px] text-cyan-600 dark:text-cyan-400 font-mono" dir="ltr">{(student.secondary_guardian || student.profile?.secondary_guardian).phone_number}</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[9px] font-bold text-slate-400">غير مسجل</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        {isEnrolled ? (
+                          <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 rounded-lg w-fit">
+                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span>{circleName ? circleName : 'ملتحق بحلقة'}</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 rounded-lg w-fit">
+                            <div className="h-1.5 w-1.5 rounded-full bg-amber-500"></div>
+                            <span>غير مسكن</span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        {isDiscontinued ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600">
+                            <UserX size={10} />
+                            <span>منقطع</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600">
+                            <Activity size={10} />
+                            <span>نشط</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-left">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link 
+                            to={`/students/${student.id}`} 
+                            title="عرض ملف الطالب"
+                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-primary hover:bg-primary/10 transition-all"
+                          >
+                            <Eye size={15} />
+                          </Link>
+                          <button 
+                            onClick={() => navigate(`/students/${student.id}/edit`)}
+                            title="تعديل بيانات الطالب"
+                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-amber-500 hover:bg-amber-500/10 transition-all"
+                          >
+                            <Edit size={15} />
+                          </button>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1 text-[9px] font-black text-slate-300">
-                          <div className="h-1.5 w-1.5 rounded-full bg-slate-300"></div>
-                          غير ملتحق
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-4 text-left">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Link 
-                          to={`/students/${student.id}`} 
-                          className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-primary hover:shadow-sm transition-all border border-slate-100 dark:border-white/5"
-                        >
-                            <Eye size={12} />
-                        </Link>
-                        <button 
-                          onClick={() => navigate(`/students/${student.id}/edit`)}
-                          className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-amber-500 hover:shadow-sm transition-all border border-slate-100 dark:border-white/5"
-                        >
-                            <Edit size={12} />
-                        </button>
-                        <button className="p-1.5 rounded-lg bg-white dark:bg-slate-800 text-slate-400 hover:text-slate-600 hover:shadow-sm transition-all border border-slate-100 dark:border-white/5">
-                            <MoreHorizontal size={12} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* FIX: Pagination Controls */}
+      {lastPage > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 glass-card rounded-2xl">
+          <p className="text-[10px] font-bold text-slate-400">
+            إجمالي {total} طالب - صفحة {currentPage} من {lastPage}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-black text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 transition-all"
+            >
+              السابق
+            </button>
+            <span className="px-3 py-2 rounded-xl bg-primary text-white text-xs font-black">
+              {currentPage}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, lastPage))}
+              disabled={currentPage === lastPage}
+              className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-black text-slate-600 dark:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-200 transition-all"
+            >
+              التالي
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-
-interface FilterSelectProps {
-  label: string;
-  icon: React.ReactNode;
-  value: string;
-  options: string[];
-  onChange: (val: string) => void;
-}
-
-const FilterSelect: React.FC<FilterSelectProps> = ({ label, icon, value, options, onChange }) => (
-  <div className="flex flex-col gap-1.5">
-    <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider mr-2">{label}</label>
-    <div className="relative">
-      <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-        {icon}
-      </div>
-      <select
-        className="w-full appearance-none rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 py-2 pr-9 pl-3 font-bold text-slate-700 dark:text-slate-300 text-[10px] outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">الكل</option>
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-      <ChevronDown className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
-    </div>
-  </div>
-);
-
-const Award: React.FC<{size?: number, className?: string}> = ({size=16, className=""}) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="8" r="7" />
-    <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
-  </svg>
-);
 
 export default StudentList;

@@ -22,9 +22,9 @@ import SchoolSettings from './pages/SchoolSettings';
 import WhatsAppSettings from './pages/WhatsAppSettings';
 
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
-  console.log('App component rendering');
   const [loading, setLoading] = useState<boolean>(true);
   const { pathname } = useLocation();
 
@@ -48,6 +48,7 @@ function App() {
   }
 
   return (
+    <ErrorBoundary>
     <Routes>
       <Route path="/auth/signin" element={<SignIn />} />
       
@@ -64,8 +65,8 @@ function App() {
             <Route path="/whatsapp" element={<WhatsAppSettings />} />
           </Route>
 
-          {/* Admin, Supervisor & Owner */}
-          <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'superadmin', 'owner']} />}>
+          {/* Admin, Supervisor, Manager & Owner */}
+          <Route element={<ProtectedRoute allowedRoles={['admin', 'supervisor', 'manager', 'superadmin', 'owner']} />}>
             <Route path="/students" element={<StudentList />} />
             <Route path="/students/new" element={<StudentForm />} />
             <Route path="/students/:id/edit" element={<StudentForm />} />
@@ -76,8 +77,8 @@ function App() {
             <Route path="/settings" element={<Settings />} />
           </Route>
 
-          {/* Teacher, Supervisor, Admin & Owner */}
-          <Route element={<ProtectedRoute allowedRoles={['teacher', 'supervisor', 'admin', 'superadmin', 'owner']} />}>
+          {/* Teacher, Manager, Supervisor, Admin & Owner */}
+          <Route element={<ProtectedRoute allowedRoles={['teacher', 'manager', 'supervisor', 'admin', 'superadmin', 'owner']} />}>
             <Route path="/attendance" element={<AttendanceBoard />} />
             <Route path="/progress" element={<ProgressTracking />} />
             <Route path="/reports" element={<Reports />} />
@@ -89,6 +90,7 @@ function App() {
         </Route>
       </Route>
     </Routes>
+    </ErrorBoundary>
   );
 }
 

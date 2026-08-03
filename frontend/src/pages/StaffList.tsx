@@ -4,7 +4,8 @@ import {
   Search, Filter, Eye, Edit, 
   UserPlus, FileDown, Shield,
   Phone, CreditCard, Mail, 
-  Power, Check as CheckCircle2, AlertCircle as XCircle
+  Power, Check as CheckCircle2, AlertCircle as XCircle,
+  Award, Building, Activity, UserX
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,10 +16,24 @@ interface StaffData {
   email: string;
   role: 'admin' | 'teacher' | 'manager' | 'supervisor';
   is_active: boolean;
+  national_id?: string | null;
+  identity_type?: string | null;
+  bank_name?: string | null;
+  bank_account_number?: string | null;
+  specialization?: string | null;
+  academic_qualification?: string | null;
+  status?: string | null;
+  quran_ijazat?: string[] | null;
   profile?: {
-    bank_account_number: string | null;
-    specialization: string | null;
-    qualification: string | null;
+    national_id?: string | null;
+    identity_type?: string | null;
+    bank_name?: string | null;
+    bank_account_number?: string | null;
+    specialization?: string | null;
+    academic_qualification?: string | null;
+    qualification?: string | null;
+    status?: string | null;
+    quran_ijazat?: string[] | null;
   };
 }
 
@@ -41,9 +56,9 @@ const StaffList: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get('/staff');
-      let data = response.data;
+      // FIX: handle paginated response (StaffController now returns paginate())
+      let data = response.data?.data || (Array.isArray(response.data) ? response.data : []);
       
-      // Role-based filtering logic
       if (viewerRole === 'owner') {
         data = data.filter((s: StaffData) => s.role === 'supervisor');
       } else if (viewerRole === 'supervisor') {
@@ -79,14 +94,16 @@ const StaffList: React.FC = () => {
   };
 
   const filteredStaff = (staff || []).filter(member => {
+    const nationalId = member.profile?.national_id || '';
     const matchesSearch = (member.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (member.phone || '').includes(searchTerm);
+                         (member.phone || '').includes(searchTerm) ||
+                         (nationalId.length > 0 && nationalId.includes(searchTerm));
     const matchesRole = !roleFilter || member.role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+    <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-10">
       {/* Header Section */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-3">
@@ -100,16 +117,12 @@ const StaffList: React.FC = () => {
         </div>
         
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-4 py-2 font-bold text-xs text-slate-600 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 transition-all">
-            <FileDown size={14} />
-            تصدير البيانات
-          </button>
           <button 
             onClick={() => navigate('/staff/new')}
-            className="flex items-center gap-1.5 rounded-lg bg-primary px-5 py-2 font-black text-xs text-white shadow-sm transition-all hover:scale-[1.02] active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2.5 font-black text-xs text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95"
           >
             <UserPlus size={14} />
-            إضافة عضو
+            إضافة عضو جديد
           </button>
         </div>
       </div>
@@ -119,18 +132,18 @@ const StaffList: React.FC = () => {
         <div className="relative flex-grow max-w-lg">
           <input
             type="text"
-            placeholder="بحث بالاسم أو الجوال..."
-            className="w-full rounded-xl border-none bg-white dark:bg-slate-900 py-2.5 pr-10 pl-4 font-bold text-xs text-slate-700 dark:text-slate-200 outline-none ring-1 ring-slate-200 dark:ring-slate-800 focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
+            placeholder="بحث بالاسم، رقم الجوال، أو الهوية..."
+            className="w-full rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-3 pr-10 pl-4 font-bold text-xs text-slate-700 dark:text-slate-200 outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
         </div>
         
-        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <Filter size={14} className="text-slate-400" />
           <select 
-            className="bg-transparent border-none outline-none font-bold text-[10px] text-slate-600 dark:text-slate-400 cursor-pointer"
+            className="bg-transparent border-none outline-none font-bold text-xs text-slate-600 dark:text-slate-400 cursor-pointer"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
           >
@@ -144,100 +157,113 @@ const StaffList: React.FC = () => {
       </div>
 
       {/* Enhanced Staff Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl border border-white/10 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-right">
             <thead>
-              <tr className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800">
-                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider">العضو والوظيفة</th>
-                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider">معلومات التواصل</th>
-                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider">رقم الحساب البنكي</th>
-                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider text-center">الحالة</th>
-                <th className="py-3 px-5 font-black text-slate-500 uppercase text-[9px] tracking-wider text-left">الإجراءات</th>
+              <tr className="bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                <th className="py-4 px-5">العضو والوظيفة</th>
+                <th className="py-4 px-5">معلومات التواصل والهوية</th>
+                <th className="py-4 px-5">المؤهل والتخصص</th>
+                <th className="py-4 px-5">الحساب البنكي</th>
+                <th className="py-4 px-5 text-center">الحالة</th>
+                <th className="py-4 px-5 text-left">الإجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-bold text-xs">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center">
+                  <td colSpan={6} className="py-20 text-center">
                     <div className="inline-block h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                   </td>
                 </tr>
               ) : filteredStaff.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center font-black text-xs text-slate-400">لا يوجد بيانات للعرض</td>
+                  <td colSpan={6} className="py-20 text-center font-black text-xs text-slate-400">لا يوجد بيانات للعرض</td>
                 </tr>
               ) : (
-                filteredStaff.map((member) => (
-                  <tr key={member.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
-                    <td className="py-3 px-5">
-                      <div className="flex items-center gap-3">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${member.is_active ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-400'}`}>
-                            {(member.name || '?').charAt(0)}
+                filteredStaff.map((member) => {
+                  const nationalId = member.national_id || member.profile?.national_id || 'غير مسجل';
+                  const qual = member.academic_qualification || member.profile?.academic_qualification || member.profile?.qualification || 'غير محدد';
+                  const spec = member.specialization || member.profile?.specialization || 'عام';
+                  const isDiscontinued = (member.status || member.profile?.status) === 'discontinued';
+                  const bankName = member.bank_name || member.profile?.bank_name;
+                  const bankAcc = member.bank_account_number || member.profile?.bank_account_number || 'غير مسجل';
+
+                  return (
+                    <tr key={member.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-black text-sm transition-all ${member.is_active ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-400'}`}>
+                              {(member.name || '?').charAt(0)}
+                          </div>
+                          <div>
+                              <h5 className={`font-black text-xs leading-tight ${member.is_active ? 'text-slate-800 dark:text-white' : 'text-slate-400'}`}>{member.name}</h5>
+                              <span className="text-[9px] font-bold text-primary uppercase tracking-wider">
+                                  {member.role === 'teacher' ? 'معلم حلقة' : member.role === 'admin' ? 'مدير الشؤون الإدارية' : member.role === 'supervisor' ? 'مدير المجمع' : 'مشرف تعليمي'}
+                              </span>
+                          </div>
                         </div>
-                        <div>
-                            <h5 className={`font-black text-xs leading-tight ${member.is_active ? 'text-slate-800 dark:text-white' : 'text-slate-400'}`}>{member.name}</h5>
-                            <span className="text-[9px] font-bold text-primary uppercase tracking-wider">
-                                {member.role === 'teacher' ? 'معلم حلقة' : member.role === 'admin' ? 'مدير الشؤون الإدارية' : member.role === 'supervisor' ? 'مدير المجمع' : 'مشرف تعليمي'}
-                            </span>
+                      </td>
+                      <td className="py-3.5 px-5">
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <Phone size={12} className="text-slate-400" />
+                            <span>{member.phone}</span>
+                          </div>
+                          <div className="text-[9px] font-bold text-slate-400">
+                            الهوية: <span className="font-mono text-slate-600 dark:text-slate-400">{nationalId}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-5">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
-                          <Phone size={12} className="text-slate-400" />
-                          {member.phone}
+                      </td>
+                      <td className="py-3.5 px-5">
+                        <div className="flex flex-col text-[10px]">
+                          <span className="font-black text-slate-700 dark:text-slate-300">{qual}</span>
+                          <span className="text-[9px] text-slate-400">{spec}</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400">
-                          <Mail size={12} className="text-slate-300" />
-                          {member.email}
+                      </td>
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-2 p-1.5 px-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 w-fit">
+                          <CreditCard size={12} className="text-primary/70" />
+                          <span className="font-mono font-black text-slate-700 dark:text-slate-300 text-[10px]">
+                            {bankName ? `${bankName}: ` : ''}{bankAcc}
+                          </span>
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-5">
-                      <div className="flex items-center gap-2 p-1.5 px-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 w-fit">
-                        <CreditCard size={12} className="text-primary/70" />
-                        <span className="font-mono font-black text-slate-700 dark:text-slate-300 text-[10px]">
-                          {member.profile?.bank_account_number || 'غير مسجل'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-5 text-center">
-                      <button 
-                        onClick={() => toggleStatus(member)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black transition-all ${
-                          member.is_active 
-                          ? 'bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20' 
-                          : 'bg-rose-500/10 text-rose-500 hover:bg-rose-500/20'
-                        }`}
-                      >
-                        {member.is_active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                        {member.is_active ? 'نشط حالياً' : 'غير نشط'}
-                      </button>
-                    </td>
-                    <td className="py-3 px-5 text-left">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-primary hover:text-white transition-all dark:bg-slate-800">
-                            <Eye size={14} />
-                        </button>
-                        <button 
-                          onClick={() => navigate(`/staff/${member.id}/edit`)}
-                          className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-amber-500 hover:text-white transition-all dark:bg-slate-800"
-                        >
-                            <Edit size={14} />
-                        </button>
-                        <button 
-                          onClick={() => toggleStatus(member)}
-                          className={`p-2 rounded-lg bg-slate-50 transition-all dark:bg-slate-800 ${member.is_active ? 'text-rose-500 hover:bg-rose-500 hover:text-white' : 'text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
-                          title={member.is_active ? 'تعطيل الحساب' : 'تنشيط الحساب'}
-                        >
-                             {member.is_active ? <Power size={14} className="opacity-50" /> : <Power size={14} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="py-3.5 px-5 text-center">
+                        {isDiscontinued ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-rose-50 dark:bg-rose-500/10 text-rose-600">
+                            <UserX size={10} />
+                            <span>منقطع</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[9px] font-black bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600">
+                            <Activity size={10} />
+                            <span>نشط</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-5 text-left">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button 
+                            onClick={() => navigate(`/staff/${member.id}/edit`)}
+                            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-amber-500 hover:bg-amber-500/10 transition-all"
+                            title="تعديل ملف العضو"
+                          >
+                            <Edit size={15} />
+                          </button>
+                          <button 
+                            onClick={() => toggleStatus(member)}
+                            className={`p-2 rounded-xl transition-all ${member.is_active ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
+                            title={member.is_active ? 'تعطيل دخول الحساب' : 'تنشيط دخول الحساب'}
+                          >
+                            <Power size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

@@ -11,10 +11,12 @@ import {
   AlertCircle,
   Search,
   Filter,
-  Check as CheckCircle2,
+  CheckCircle2,
   Users,
   UserMinus,
-  Loader
+  Loader,
+  Zap,
+  Sparkles
 } from 'lucide-react';
 
 const AttendanceBoard: React.FC = () => {
@@ -23,6 +25,7 @@ const AttendanceBoard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<Record<string, Record<string, string>>>({});
   const [dates, setDates] = useState<string[]>([]);
+  const [selectedDateIndex, setSelectedDateIndex] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sendNotifications, setSendNotifications] = useState(true);
@@ -43,7 +46,7 @@ const AttendanceBoard: React.FC = () => {
   const generateDates = () => {
     const today = new Date();
     const days = [];
-    for (let i = 0; i < 4; i++) { // Even more compact: 4 days
+    for (let i = 0; i < 4; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       days.push(d.toISOString().split('T')[0]);
@@ -58,33 +61,42 @@ const AttendanceBoard: React.FC = () => {
   const fetchCircles = async () => {
     try {
       const response = await axios.get('/circles');
-      let data = response.data.data || response.data;
+      let data = Array.isArray(response.data?.data) ? response.data.data : (Array.isArray(response.data) ? response.data : []);
       
-      // Frontend restriction for Teacher/Supervisor if backend isn't filtering yet
       if (role === 'teacher' && user?.circle_id) {
-        data = data.filter((c: any) => c.id === user.circle_id);
-      } else if (role === 'supervisor' && user?.allowed_circles?.length > 0) {
-        data = data.filter((c: any) => user.allowed_circles.includes(c.id));
+        const teacherCircles = data.filter((c: any) => c.id === user.circle_id || c.teacher_id === user.id);
+        if (teacherCircles.length > 0) {
+          data = teacherCircles;
+        }
       }
       
       setCircles(data);
       if (data.length > 0) {
-        // If teacher, auto-select their circle
         const defaultCircle = (role === 'teacher' && user?.circle_id) 
           ? data.find((c: any) => c.id === user.circle_id)?.id || data[0].id
           : data[0].id;
         setSelectedCircle(defaultCircle);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching circles:', error);
     }
   };
 
   const fetchCircleStudents = async () => {
+    if (!selectedCircle) return;
     setLoading(true);
     try {
       const response = await axios.get(`/circles/${selectedCircle}`);
-      const studentList = response.data.enrollments?.map((e: any) => e.student) || response.data.students || [];
+      const rawEnrollments = response.data.enrollments || [];
+      let studentList = rawEnrollments.map((e: any) => e.student).filter((s: any) => s && s.id);
+      
+      // Fallback: If no students enrolled in this circle, fetch students list from school
+      if (studentList.length === 0) {
+        const allStudentsRes = await axios.get('/students?per_page=100');
+        const rawAll = allStudentsRes.data.data || allStudentsRes.data;
+        studentList = Array.isArray(rawAll) ? rawAll : [];
+      }
+
       setStudents(studentList);
       
       const attendanceRes = await axios.get(`/attendance/circle/${selectedCircle}`);
@@ -93,129 +105,122 @@ const AttendanceBoard: React.FC = () => {
       const initial: Record<string, Record<string, string>> = {};
       studentList.forEach((s: Student) => {
         initial[s.id] = {};
-        existingRecords.forEach((rec: any) => {
-          if (rec.student_id === s.id) {
-            initial[s.id][rec.date] = rec.status;
-          }
+        // Default today to present if not recorded yet
+        dates.forEach(d => {
+          initial[s.id][d] = 'present';
         });
+
+        if (Array.isArray(existingRecords)) {
+          existingRecords.forEach((rec: any) => {
+            if (rec.student_id === s.id && rec.date) {
+              const formattedDate = String(rec.date).split('T')[0];
+              initial[s.id][formattedDate] = rec.status;
+            }
+          });
+        }
       });
       setAttendance(initial);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching circle students:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleStatus = (studentId: string, date: string) => {
-    const current = attendance[studentId]?.[date];
-    const sequence = [null, 'present', 'absent', 'late', 'excused'];
-    const nextIndex = (sequence.indexOf(current as any) + 1) % sequence.length;
-    const nextStatus = sequence[nextIndex];
-
-    setAttendance({
-      ...attendance,
-      [studentId]: { ...attendance[studentId], [date]: nextStatus as string },
-    });
+  const setStudentStatus = (studentId: string, status: string, date: string = dates[selectedDateIndex]) => {
+    setAttendance(prev => ({
+      ...prev,
+      [studentId]: {
+        ...(prev[studentId] || {}),
+        [date]: status
+      }
+    }));
   };
 
-  const markAllPresent = () => {
-    const today = dates[0];
+  const toggleStudentPresence = (studentId: string, date: string = dates[selectedDateIndex]) => {
+    const current = attendance[studentId]?.[date];
+    const newStatus = current === 'present' ? 'absent' : 'present';
+    setStudentStatus(studentId, newStatus, date);
+  };
+
+  const markAllStatus = (status: string) => {
+    const date = dates[selectedDateIndex];
     const newAttendance = { ...attendance };
     students.forEach(student => {
       if (!newAttendance[student.id]) newAttendance[student.id] = {};
-      newAttendance[student.id][today] = 'present';
+      newAttendance[student.id][date] = status;
     });
     setAttendance(newAttendance);
   };
 
   const filteredStudents = students.filter(s => 
-    (s.full_name || (s as any).name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (s.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const saveAttendance = async () => {
     setSaving(true);
     setMessage(null);
     try {
-      const today = dates[0];
-      const records = Object.entries(attendance).map(([studentId, dates]) => ({
+      const activeDate = dates[selectedDateIndex];
+      const records = Object.entries(attendance).map(([studentId, dateObj]) => ({
         student_id: studentId,
-        status: dates[today] || 'present'
+        status: dateObj[activeDate] || 'present'
       }));
 
       await axios.post('/attendance', {
         circle_id: selectedCircle,
-        date: today,
+        date: activeDate,
         records,
         send_notifications: sendNotifications
       });
 
-      setMessage({ type: 'success', text: 'تم حفظ التحضير بنجاح' });
+      setMessage({ type: 'success', text: `تم حفظ تحضير يوم (${activeDate}) بنجاح` });
       setTimeout(() => setMessage(null), 3000);
     } catch (error) {
-      setMessage({ type: 'error', text: 'فشل حفظ التحضير' });
+      setMessage({ type: 'error', text: 'فشل حفظ التحضير، يرجى المحاولة مرة أخرى' });
     } finally {
       setSaving(false);
     }
   };
 
-  const getStatusConfig = (status: string | null) => {
-    switch (status) {
-      case 'present': return { color: 'bg-emerald-500', icon: <Check size={10} strokeWidth={4} /> };
-      case 'absent': return { color: 'bg-danger', icon: <X size={10} strokeWidth={4} /> };
-      case 'late': return { color: 'bg-amber-500', icon: <Clock size={10} strokeWidth={4} /> };
-      case 'excused': return { color: 'bg-blue-500', icon: <UserCheck size={10} strokeWidth={4} /> };
-      default: return { color: 'bg-slate-50 dark:bg-slate-800/50', icon: null };
-    }
-  };
-
-  // Quick Stats
-  const today = dates[0];
+  const activeDate = dates[selectedDateIndex] || dates[0];
   const stats = {
     total: students.length,
-    present: Object.values(attendance).filter(d => d[today] === 'present').length,
-    absent: Object.values(attendance).filter(d => d[today] === 'absent').length,
-    late: Object.values(attendance).filter(d => d[today] === 'late').length,
+    present: students.filter(s => attendance[s.id]?.[activeDate] === 'present').length,
+    absent: students.filter(s => attendance[s.id]?.[activeDate] === 'absent').length,
+    late: students.filter(s => attendance[s.id]?.[activeDate] === 'late').length,
+    excused: students.filter(s => attendance[s.id]?.[activeDate] === 'excused').length,
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4 animate-in fade-in duration-500 pb-10">
+    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 pb-20">
       
-      {/* Dense Premium Header */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-800">
+      {/* Top Header Card */}
+      <div className="bg-white dark:bg-slate-900 p-5 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-           {/* Left: Title & Search */}
+           
+           {/* Left Info & Circle Selector */}
            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-primary/10 rounded-2xl text-primary shrink-0">
-                  <CheckCircle2 size={22} strokeWidth={2.5} />
+                <div className="p-3 bg-primary/10 rounded-2xl text-primary shrink-0">
+                  <CheckCircle2 size={24} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <h1 className="text-lg font-black text-slate-800 dark:text-white leading-tight">تحضير اليوم</h1>
+                  <h1 className="text-xl font-black text-slate-800 dark:text-white leading-tight">سجل التحضير والغياب</h1>
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                    {new Date().toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {new Date().toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center bg-slate-50 dark:bg-slate-800/50 p-1 rounded-2xl border border-slate-100 dark:border-slate-700">
-                 <div className="relative">
-                    <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input 
-                      type="text"
-                      placeholder="ابحث عن طالب..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-32 lg:w-48 bg-transparent py-2.5 pr-9 pl-3 text-xs font-bold outline-none border-none"
-                    />
-                 </div>
-                 <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"></div>
+              {/* Circle Selector & Student Search */}
+              <div className="flex items-center bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-700">
                  <div className="relative">
                     <select
                       value={selectedCircle}
                       onChange={(e) => setSelectedCircle(e.target.value)}
                       disabled={role === 'teacher' && circles.length === 1}
-                      className={`bg-transparent py-2.5 pr-3 pl-8 text-xs font-black text-slate-600 dark:text-slate-300 outline-none appearance-none cursor-pointer ${role === 'teacher' && circles.length === 1 ? 'opacity-70 cursor-not-allowed' : ''}`}
+                      className={`bg-transparent py-2.5 pr-3 pl-8 text-xs font-black text-slate-700 dark:text-slate-200 outline-none appearance-none cursor-pointer ${role === 'teacher' && circles.length === 1 ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
                       {circles.map(c => (
                         <option key={c.id} value={c.id}>{c.name}</option>
@@ -223,15 +228,28 @@ const AttendanceBoard: React.FC = () => {
                     </select>
                     <Filter size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-primary pointer-events-none" />
                  </div>
+                 
+                 <div className="h-5 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+                 <div className="relative">
+                    <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input 
+                      type="text"
+                      placeholder="ابحث عن طالب..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-32 lg:w-44 bg-transparent py-2.5 pr-9 pl-3 text-xs font-bold outline-none border-none"
+                    />
+                 </div>
               </div>
            </div>
 
-           {/* Right: Actions */}
+           {/* Right Actions */}
            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-700">
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/50 p-2 rounded-2xl border border-slate-100 dark:border-slate-700">
                  <div className="flex items-center gap-1.5 px-2">
                     <Smartphone size={14} className={sendNotifications ? 'text-emerald-500' : 'text-slate-300'} />
-                    <span className="text-[10px] font-black text-slate-500">إشعار</span>
+                    <span className="text-[10px] font-black text-slate-600 dark:text-slate-300">إشعار ولي الأمر</span>
                  </div>
                  <button 
                     onClick={() => setSendNotifications(!sendNotifications)}
@@ -242,151 +260,211 @@ const AttendanceBoard: React.FC = () => {
               </div>
 
               <button 
-                onClick={markAllPresent}
-                className="px-5 py-3 rounded-2xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-black border border-slate-100 dark:border-slate-700 transition-all hover:bg-slate-50 active:scale-95"
-              >
-                تحضير الجميع
-              </button>
-
-              <button 
                 onClick={saveAttendance}
                 disabled={saving}
-                className="flex items-center gap-2 px-8 py-3 rounded-2xl bg-primary text-white text-xs font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                className="flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-primary text-white text-xs font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50"
               >
                 {saving ? <Loader size={16} className="animate-spin" /> : <Save size={16} />}
-                <span>حفظ التحضير</span>
+                <span>حفظ بيانات اليوم</span>
               </button>
            </div>
         </div>
       </div>
 
-      {/* Stats Summary Widgets */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-         <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400"><Users size={20} /></div>
+      {/* Date Selector Tabs */}
+      <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-2 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-x-auto">
+        <span className="text-xs font-black text-slate-400 px-3 flex items-center gap-1.5">
+           <Clock size={14} /> تاريـخ التحضير:
+        </span>
+        {dates.map((dateStr, idx) => {
+          const d = new Date(dateStr);
+          const isSelected = selectedDateIndex === idx;
+          const isToday = idx === 0;
+          return (
+            <button
+              key={dateStr}
+              onClick={() => setSelectedDateIndex(idx)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-xs transition-all ${
+                isSelected 
+                  ? 'bg-primary text-white shadow-md shadow-primary/20' 
+                  : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100'
+              }`}
+            >
+              <span>{isToday ? 'اليوم' : d.toLocaleDateString('ar-SA', { weekday: 'short' })}</span>
+              <span className="text-[10px] opacity-80">({d.getDate()} {d.toLocaleDateString('ar-SA', { month: 'short' })})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Quick Stats Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+         <div className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-black"><Users size={18} /></div>
             <div>
-               <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">إجمالي الطلاب</p>
-               <p className="text-lg font-black text-slate-800 dark:text-white">{stats.total}</p>
+               <p className="text-[9px] font-black text-slate-400 uppercase">إجمالي الطلاب</p>
+               <p className="text-base font-black text-slate-800 dark:text-white">{stats.total}</p>
             </div>
          </div>
-         <div className="bg-emerald-500/5 p-4 rounded-3xl border border-emerald-500/10 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500"><CheckCircle2 size={20} /></div>
+
+         <div className="bg-emerald-500/5 p-4 rounded-3xl border border-emerald-500/10 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 font-black"><Check size={18} /></div>
             <div>
-               <p className="text-[9px] font-black text-emerald-600/60 uppercase tracking-tighter">الحاضرون</p>
-               <p className="text-lg font-black text-emerald-600">{stats.present}</p>
+               <p className="text-[9px] font-black text-emerald-600/70 uppercase">الحاضرون</p>
+               <p className="text-base font-black text-emerald-600">{stats.present}</p>
             </div>
          </div>
-         <div className="bg-danger/5 p-4 rounded-3xl border border-danger/10 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-2xl bg-danger/10 flex items-center justify-center text-danger"><UserMinus size={20} /></div>
+
+         <div className="bg-rose-500/5 p-4 rounded-3xl border border-rose-500/10 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-600 font-black"><X size={18} /></div>
             <div>
-               <p className="text-[9px] font-black text-danger/60 uppercase tracking-tighter">الغائبون</p>
-               <p className="text-lg font-black text-danger">{stats.absent}</p>
+               <p className="text-[9px] font-black text-rose-600/70 uppercase">الغائبون</p>
+               <p className="text-base font-black text-rose-600">{stats.absent}</p>
             </div>
          </div>
-         <div className="bg-amber-500/5 p-4 rounded-3xl border border-amber-500/10 flex items-center gap-4">
-            <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500"><Clock size={20} /></div>
+
+         <div className="bg-amber-500/5 p-4 rounded-3xl border border-amber-500/10 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 font-black"><Clock size={18} /></div>
             <div>
-               <p className="text-[9px] font-black text-amber-600/60 uppercase tracking-tighter">المتأخرون</p>
-               <p className="text-lg font-black text-amber-600">{stats.late}</p>
+               <p className="text-[9px] font-black text-amber-600/70 uppercase">المتأخرون</p>
+               <p className="text-base font-black text-amber-600">{stats.late}</p>
+            </div>
+         </div>
+
+         <div className="bg-blue-500/5 p-4 rounded-3xl border border-blue-500/10 flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600 font-black"><UserCheck size={18} /></div>
+            <div>
+               <p className="text-[9px] font-black text-blue-600/70 uppercase">المستأذنون</p>
+               <p className="text-base font-black text-blue-600">{stats.excused}</p>
             </div>
          </div>
       </div>
 
       {message && (
-        <div className={`p-3.5 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top duration-500 ${message.type === 'success' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/10' : 'bg-danger/10 text-danger border border-danger/10'}`}>
-            {message.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+        <div className={`p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top duration-500 ${message.type === 'success' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'}`}>
+            {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
             <span className="font-black text-xs">{message.text}</span>
         </div>
       )}
 
-      {/* Modern Dense Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
-        <div className="overflow-x-auto">
-          <table className="w-full text-right">
-            <thead>
-              <tr className="bg-slate-50/50 dark:bg-slate-800/30">
-                <th className="py-5 px-8 text-right font-black text-slate-400 text-[10px] uppercase tracking-wider sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-l border-slate-50 dark:border-slate-800">بيانات الطالب</th>
-                {dates.map((date, idx) => {
-                  const d = new Date(date);
-                  const isToday = idx === 0;
-                  return (
-                    <th key={date} className={`py-3 px-3 text-center min-w-[75px] ${isToday ? 'bg-primary/5' : ''}`}>
-                      <div className={`text-[9px] font-black uppercase mb-1 ${isToday ? 'text-primary' : 'text-slate-400'}`}>
-                        {isToday ? 'اليوم' : d.toLocaleDateString('ar-SA', { weekday: 'short' })}
-                      </div>
-                      <div className={`text-base font-black leading-none ${isToday ? 'text-primary' : 'text-slate-700 dark:text-slate-300'}`}>{d.getDate()}</div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-              {loading ? (
-                <tr><td colSpan={dates.length + 1} className="py-24 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                        <Loader size={32} className="text-primary animate-spin" />
-                        <span className="font-black text-slate-300 text-[10px] uppercase tracking-widest">جاري سحب البيانات...</span>
-                    </div>
-                </td></tr>
-              ) : filteredStudents.length === 0 ? (
-                <tr><td colSpan={dates.length + 1} className="py-24 text-center">
-                   <div className="flex flex-col items-center gap-2 text-slate-300">
-                      <Search size={48} strokeWidth={1} />
-                      <p className="font-black text-xs uppercase">لم يتم العثور على طلاب</p>
-                   </div>
-                </td></tr>
-              ) : (
-                filteredStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/10 transition-colors group">
-                    <td className="py-4 px-8 sticky right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10 border-l border-slate-50 dark:border-slate-800">
-                       <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-xs font-black text-slate-400 group-hover:text-primary transition-colors">
-                             {(student.full_name || (student as any).name || '?').charAt(0)}
-                          </div>
-                          <div className="flex flex-col">
-                             <span className="text-sm font-black text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">{student.full_name || (student as any).name}</span>
-                             <span className="text-[9px] font-bold text-slate-400">ID: #{(student.id as string).substring(0, 6)}</span>
-                          </div>
-                       </div>
-                    </td>
-                    {dates.map((date, idx) => {
-                      const config = getStatusConfig(attendance[student.id]?.[date] || null);
-                      const isToday = idx === 0;
-                      return (
-                        <td key={date} className={`py-3 px-3 text-center ${isToday ? 'bg-primary/5' : ''}`}>
-                          <button
-                            onClick={() => toggleStatus(student.id, date)}
-                            className={`mx-auto w-9 h-9 rounded-[1.1rem] flex items-center justify-center transition-all transform active:scale-90 hover:scale-105 ${config.color} ${attendance[student.id]?.[date] ? 'text-white shadow-lg' : 'opacity-20 hover:opacity-100 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
-                            style={{ boxShadow: attendance[student.id]?.[date] ? `0 8px 15px -4px ${config.color.includes('emerald') ? 'rgba(16,185,129,0.4)' : config.color.includes('danger') ? 'rgba(239,68,68,0.4)' : 'rgba(245,158,11,0.4)'}` : 'none' }}
-                          >
-                            {config.icon || <span className="text-slate-300 font-black text-lg">.</span>}
-                          </button>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* Bulk Action Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+        <span className="text-xs font-black text-slate-700 dark:text-slate-300">العمليات الجماعية:</span>
+        <div className="flex flex-wrap items-center gap-2">
+           <button 
+             onClick={() => markAllStatus('present')}
+             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500/10 text-emerald-600 font-black text-xs hover:bg-emerald-500 hover:text-white transition-all"
+           >
+             <Check size={14} /> تحديد الجميع كـ حاضر
+           </button>
+           <button 
+             onClick={() => markAllStatus('absent')}
+             className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-500/10 text-rose-600 font-black text-xs hover:bg-rose-500 hover:text-white transition-all"
+           >
+             <X size={14} /> تحديد الجميع كـ غائب
+           </button>
         </div>
       </div>
-      
-      {/* Dense Legend */}
-      <div className="bg-white dark:bg-slate-900 p-4 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-center gap-8">
-        {[
-          { color: 'bg-emerald-500', icon: Check, label: 'حاضر' },
-          { color: 'bg-danger', icon: X, label: 'غائب' },
-          { color: 'bg-amber-500', icon: Clock, label: 'متأخر' },
-          { color: 'bg-blue-500', icon: UserCheck, label: 'مستأذن' }
-        ].map((item, i) => (
-          <div key={i} className="flex items-center gap-2.5">
-            <div className={`w-5 h-5 rounded-lg ${item.color} flex items-center justify-center text-white`}><item.icon size={10} strokeWidth={4} /></div>
-            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">{item.label}</span>
-          </div>
-        ))}
+
+      {/* Main Student Attendance List */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 dark:border-slate-800">
+         {loading ? (
+           <div className="py-24 text-center flex flex-col items-center gap-3">
+              <Loader size={36} className="text-primary animate-spin" />
+              <span className="font-black text-xs text-slate-400 animate-pulse">جاري تحميل قائمة الطلاب...</span>
+           </div>
+         ) : filteredStudents.length === 0 ? (
+           <div className="py-24 text-center flex flex-col items-center gap-3 text-slate-400">
+              <Search size={40} strokeWidth={1.5} />
+              <p className="font-black text-sm">لم يتم العثور على طلاب بالحلقة المختارة</p>
+           </div>
+         ) : (
+           <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {filteredStudents.map((student) => {
+                const currentStatus = attendance[student.id]?.[activeDate] || 'present';
+                return (
+                  <div key={student.id} className="p-4 md:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                     
+                     {/* Student Info & Quick Attendance Toggle */}
+                     <div className="flex items-center gap-4">
+                        {/* Attendance Toggle Power Switch Button */}
+                        <button
+                           onClick={() => toggleStudentPresence(student.id)}
+                           title={currentStatus === 'present' ? 'انقر للتحويل إلى غائب' : 'انقر للتحويل إلى حاضر'}
+                           className={`h-11 w-11 rounded-2xl flex items-center justify-center font-black transition-all hover:scale-110 active:scale-95 shadow-sm ${
+                              currentStatus === 'present' ? 'bg-emerald-500 text-white shadow-emerald-500/20' :
+                              currentStatus === 'absent' ? 'bg-rose-500 text-white shadow-rose-500/20' :
+                              currentStatus === 'late' ? 'bg-amber-500 text-white shadow-amber-500/20' :
+                              'bg-blue-500 text-white shadow-blue-500/20'
+                           }`}
+                        >
+                           {currentStatus === 'present' && <Check size={20} strokeWidth={3} />}
+                           {currentStatus === 'absent' && <X size={20} strokeWidth={3} />}
+                           {currentStatus === 'late' && <Clock size={20} strokeWidth={3} />}
+                           {currentStatus === 'excused' && <UserCheck size={20} strokeWidth={3} />}
+                        </button>
+
+                        <div>
+                           <h3 className="font-black text-sm text-slate-800 dark:text-white leading-snug">{student.name}</h3>
+                           <p className="text-[10px] font-bold text-slate-400">الهوية: {student.profile?.national_id || student.profile?.identity_number || student.phone || 'مسجل بالحلقة'}</p>
+                        </div>
+                     </div>
+
+                     {/* Status Selection Pill Buttons */}
+                     <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={() => setStudentStatus(student.id, 'present')}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
+                            currentStatus === 'present' 
+                              ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20 scale-105' 
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-emerald-50'
+                          }`}
+                        >
+                          🟢 حاضر
+                        </button>
+
+                        <button
+                          onClick={() => setStudentStatus(student.id, 'absent')}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
+                            currentStatus === 'absent' 
+                              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20 scale-105' 
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-rose-50'
+                          }`}
+                        >
+                          🔴 غائب
+                        </button>
+
+                        <button
+                          onClick={() => setStudentStatus(student.id, 'late')}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
+                            currentStatus === 'late' 
+                              ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20 scale-105' 
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-amber-50'
+                          }`}
+                        >
+                          🟡 متأخر
+                        </button>
+
+                        <button
+                          onClick={() => setStudentStatus(student.id, 'excused')}
+                          className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all ${
+                            currentStatus === 'excused' 
+                              ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20 scale-105' 
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-blue-50'
+                          }`}
+                        >
+                          🔵 مستأذن
+                        </button>
+                     </div>
+
+                  </div>
+                );
+              })}
+           </div>
+         )}
       </div>
-    </div>
+
+   </div>
   );
 };
 

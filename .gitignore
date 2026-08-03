@@ -1,10 +1,64 @@
-﻿.env
+﻿# Environment
+.env
+*.env
+
+# Archives
 *.zip
 *.tar.gz
+*.rar
+
+# Scratch/Temp
 scratch/
+*.tmp
+*.temp
+temp_data*.csv
+~$*
+
+# Database
 *.sql
+*.sqlite
+*.db
+
+# Logs
+*.log
 *.txt
+
+# Dependencies
 node_modules/
 vendor/
+
+# Laravel
 storage/*.key
 .phpunit.result.cache
+bootstrap/cache/
+
+# Sensitive Data Files
+*.xlsx
+*.xls
+*.csv
+بيانات*
+حلقات*
+قاعدة*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+
+# Test/Debug Scripts
+db_check.php
+db_viewer.html
+get_users_list.php
+import_temp_data.php
+migrate_profiles.php
+test_*.php
+inspect_schema.php

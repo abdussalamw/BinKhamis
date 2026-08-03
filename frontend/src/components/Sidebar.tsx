@@ -30,7 +30,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const role = user?.role || 'student';
 
   const menuItems = [
-    { title: 'لوحة التحكم', icon: LayoutDashboard, path: '/', roles: ['superadmin', 'owner', 'admin', 'supervisor', 'teacher', 'student'] },
+    { title: 'لوحة التحكم', icon: LayoutDashboard, path: '/', roles: ['superadmin', 'owner', 'admin', 'supervisor', 'manager', 'teacher', 'student'] },
     
     // Owner specific - Focus on platform growth
     { title: 'إدارة المجمعات', icon: Building, path: '/schools', roles: ['superadmin', 'owner'] },
@@ -38,16 +38,16 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     { title: 'ربط الواتساب', icon: MessageSquare, path: '/whatsapp', roles: ['superadmin', 'owner'] },
     { title: 'إعدادات النظام', icon: SettingsIcon, path: '/system-settings', roles: ['superadmin', 'owner'] },
     
-    // Management (Supervisor & Admin) - Focus on operations
-    { title: 'إدارة الطلاب والقبول', icon: Users, path: '/students', roles: ['admin', 'supervisor'] },
-    { title: 'الكادر الإداري والتعليمي', icon: Shield, path: '/staff', roles: ['admin', 'supervisor'] },
-    { title: 'إعدادات المجمع التعليمي', icon: Building, path: '/school-settings', roles: ['admin', 'supervisor'] },
+    // Management (Supervisor, Admin, Manager) - Focus on operations
+    { title: 'إدارة الطلاب والقبول', icon: Users, path: '/students', roles: ['admin', 'supervisor', 'manager', 'teacher'] },
+    { title: 'الكادر الإداري والتعليمي', icon: Shield, path: '/staff', roles: ['admin', 'supervisor', 'manager'] },
+    { title: 'إعدادات المجمع التعليمي', icon: Building, path: '/school-settings', roles: ['admin', 'supervisor', 'manager'] },
     
-    // Educational (Supervisor, Admin, Teacher)
-    { title: 'الحلقات القرآنية', icon: BookOpen, path: '/circles', roles: ['admin', 'supervisor', 'teacher'] },
-    { title: 'سجل الحضور', icon: Calendar, path: '/attendance', roles: ['admin', 'supervisor', 'teacher'] },
-    { title: 'متابعة الحفظ', icon: TrendingUp, path: '/progress', roles: ['admin', 'supervisor', 'teacher'] },
-    { title: 'مركز التقارير', icon: BarChart, path: '/reports', roles: ['admin', 'supervisor', 'teacher'] },
+    // Educational (Supervisor, Admin, Manager, Teacher)
+    { title: 'الحلقات القرآنية', icon: BookOpen, path: '/circles', roles: ['admin', 'supervisor', 'manager', 'teacher'] },
+    { title: 'سجل الحضور', icon: Calendar, path: '/attendance', roles: ['admin', 'supervisor', 'manager', 'teacher'] },
+    { title: 'متابعة الحفظ', icon: TrendingUp, path: '/progress', roles: ['admin', 'supervisor', 'manager', 'teacher'] },
+    { title: 'مركز التقارير', icon: BarChart, path: '/reports', roles: ['admin', 'supervisor', 'manager', 'teacher'] },
     
     // Student specific
     { title: 'ملفي الشخصي', icon: Users, path: '/student-profile', roles: ['student'] },

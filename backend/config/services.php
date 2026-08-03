@@ -38,4 +38,7 @@ return [
         'instance' => env('WA_EVO_INSTANCE', 'MainInstance'),
     ],
 
+    // FIX: Frontend URL for WhatsApp invitations and links
+    'frontend_url' => env('APP_FRONTEND_URL', env('APP_URL', 'http://localhost:5173')),
+
 ];

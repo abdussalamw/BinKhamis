@@ -112,11 +112,13 @@ class SuperAdminController extends Controller
   
                 // 3. Create the Supervisor User (in the TENANT SCHEMA)
                 $supervisorId = (string) Str::uuid();
+                // FIX: generate a random secure password instead of hardcoded 123456
+                $tempPassword = Str::random(8);
                 DB::connection('tenant')->table('users')->insert([
                     'id' => $supervisorId,
                     'name' => $request->supervisor_name,
                     'phone' => $request->supervisor_phone,
-                    'password' => Hash::make('123456'), // Default password
+                    'password' => Hash::make($tempPassword),
                     'role' => 'supervisor',
                     'school_id' => $school->id,
                     'is_active' => true,
@@ -130,15 +132,17 @@ class SuperAdminController extends Controller
                 // 5. Send WhatsApp Invitation
                 $waService = new WhatsAppService();
                 $schoolCode = str_replace('-', '_', substr($school->id, 0, 8));
-                $loginUrl = config('app.frontend_url', env('APP_FRONTEND_URL', 'http://localhost:5173')) . '/auth/signin';
+                // FIX: use config() instead of env() for frontend URL
+                $loginUrl = config('app.frontend_url', config('services.frontend_url', 'http://localhost:5173')) . '/auth/signin';
                 
                 $message = "مرحباً بك أ. *{$request->supervisor_name}* في منصة حلقات برو.\n\n"
                          . "تم إنشاء مجمعك: *{$school->name}* بنجاح.\n"
                          . "يمكنك الدخول الآن باستخدام البيانات التالية:\n\n"
                          . "📍 *رابط المنصة:* {$loginUrl}\n"
                          . "📱 *رقم الجوال:* {$request->supervisor_phone}\n"
-                         . "🔑 *كلمة المرور:* 123456\n"
+                         . "🔑 *كلمة المرور:* {$tempPassword}\n"
                          . "🏢 *كود المجمع:* `{$schoolCode}`\n\n"
+                         . "⚠️ يرجى تغيير كلمة المرور بعد تسجيل الدخول لأول مرة.\n\n"
                          . "نتمنى لكم رحلة تعليمية مباركة.";
                 
                 $waService->sendMessage($request->supervisor_phone, $message);
