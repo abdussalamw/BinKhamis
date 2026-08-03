@@ -94,7 +94,7 @@ const StaffList: React.FC = () => {
   };
 
   const filteredStaff = (staff || []).filter(member => {
-    const nationalId = member.profile?.national_id || '';
+    const nationalId = member.national_id || '';
     const matchesSearch = (member.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (member.phone || '').includes(searchTerm) ||
                          (nationalId.length > 0 && nationalId.includes(searchTerm));
@@ -183,12 +183,12 @@ const StaffList: React.FC = () => {
                 </tr>
               ) : (
                 filteredStaff.map((member) => {
-                  const nationalId = member.national_id || member.profile?.national_id || 'غير مسجل';
-                  const qual = member.academic_qualification || member.profile?.academic_qualification || member.profile?.qualification || 'غير محدد';
-                  const spec = member.specialization || member.profile?.specialization || 'عام';
-                  const isDiscontinued = (member.status || member.profile?.status) === 'discontinued';
-                  const bankName = member.bank_name || member.profile?.bank_name;
-                  const bankAcc = member.bank_account_number || member.profile?.bank_account_number || 'غير مسجل';
+                  const nationalId = member.national_id || 'غير مسجل';
+                  const qual = member.academic_qualification || 'غير محدد';
+                  const spec = member.specialization || 'عام';
+                  const isDiscontinued = member.status === 'discontinued';
+                  const bankName = member.bank_name;
+                  const bankAcc = member.bank_account_number || 'غير مسجل';
 
                   return (
                     <tr key={member.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors group">

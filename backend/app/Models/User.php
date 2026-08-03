@@ -63,7 +63,8 @@ class User extends Authenticatable
         'basic_salary',
     ];
 
-    protected $appends = ['active_profile', 'student_profile', 'teacher_profile', 'profile'];
+    // Legacy compatibility accessors (kept for backward compatibility — will be removed in v2)
+    // Data is now read directly from users table fields
 
     /**
      * The attributes that should be hidden for serialization.

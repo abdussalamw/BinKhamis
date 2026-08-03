@@ -137,7 +137,7 @@ const StaffDashboard = ({ data, recentStudents, schoolInfo }: { data: any, recen
                           </div>
                           <div>
                              <p className="text-xs font-black text-slate-800 dark:text-white">{student.name}</p>
-                             <p className="text-[9px] text-slate-400 font-bold">{student.profile?.academic_stage || 'مستجد'}</p>
+                             <p className="text-[9px] text-slate-400 font-bold">{student.academic_stage || 'مستجد'}</p>
                           </div>
                        </div>
                        <Link to={`/students/${student.id}`} className="text-[9px] px-2 py-1 bg-primary/10 rounded font-black text-primary opacity-0 group-hover:opacity-100 transition-opacity">الملف الشامل</Link>

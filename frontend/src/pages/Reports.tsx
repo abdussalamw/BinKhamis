@@ -429,7 +429,7 @@ const Reports: React.FC = () => {
                          {selectedStudent.student?.name?.charAt(0)}
                       </div>
                       <h2 className="text-lg font-black text-slate-800 dark:text-white">{selectedStudent.student?.name}</h2>
-                      <p className="text-[10px] font-black text-primary mt-1 uppercase tracking-widest">{selectedStudent.student?.profile?.current_level}</p>
+                      <p className="text-[10px] font-black text-primary mt-1 uppercase tracking-widest">{selectedStudent.student?.memorization_amount || selectedStudent.student?.academic_stage || 'عام'}</p>
                       
                        <div className="mt-8 grid grid-cols-2 gap-4">
                           <div className="p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100/50">

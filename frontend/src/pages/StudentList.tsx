@@ -259,11 +259,11 @@ const StudentList: React.FC = () => {
                 </tr>
               ) : (
                 filteredStudents.map((student: any) => {
-                  const nationalId = student.profile?.national_id || student.profile?.passport_number || student.profile?.identity_number || student.national_id || 'غير مسجل';
+                  const nationalId = student.national_id || student.passport_number || 'غير مسجل';
                   const circleName = student.enrollments?.[0]?.circle?.name;
                   const isEnrolled = (student.enrollments_count && student.enrollments_count > 0) || !!circleName;
-                  const isDiscontinued = student.profile?.status === 'discontinued';
-                  const guardian = student.profile?.guardian;
+                  const isDiscontinued = student.status === 'discontinued';
+                  const guardian = student.guardian;
 
                   return (
                     <tr key={student.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors group">
@@ -275,19 +275,19 @@ const StudentList: React.FC = () => {
                           <div>
                               <h5 className="font-black text-slate-800 dark:text-white text-[11px] group-hover:text-primary transition-colors">{student.name}</h5>
                               <p className="text-[9px] font-bold text-slate-400 mt-0.5 tracking-wider">
-                                {student.profile?.identity_type === 'passport' ? 'الجواز' : 'الهوية'}: {nationalId}
+                                {student.identity_type === 'passport' ? 'الجواز' : 'الهوية'}: {nationalId}
                               </p>
                           </div>
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">{student.profile?.academic_stage || 'عام'}</span>
-                          <span className="text-[9px] font-bold text-slate-400">{student.profile?.grade_level || 'غير محدد'}</span>
+                          <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">{student.academic_stage || 'عام'}</span>
+                          <span className="text-[9px] font-bold text-slate-400">{student.grade_level || 'غير محدد'}</span>
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        {guardian || student.secondary_guardian || student.profile?.secondary_guardian ? (
+                        {guardian || student.secondary_guardian ? (
                           <div className="flex flex-col text-[10px]">
                             {guardian && (
                               <div>
@@ -295,10 +295,10 @@ const StudentList: React.FC = () => {
                                 <p className="text-[9px] text-teal-600 dark:text-teal-400 font-mono" dir="ltr">{guardian.phone_number}</p>
                               </div>
                             )}
-                            {(student.secondary_guardian || student.profile?.secondary_guardian) && (
+                            {student.secondary_guardian && (
                               <div className="mt-1 pt-1 border-t border-slate-100 dark:border-slate-800">
-                                <span className="font-bold text-slate-500">{(student.secondary_guardian || student.profile?.secondary_guardian).full_name} ({(student.secondary_guardian || student.profile?.secondary_guardian).relation || 'ولي أمر 2'})</span>
-                                <p className="text-[9px] text-cyan-600 dark:text-cyan-400 font-mono" dir="ltr">{(student.secondary_guardian || student.profile?.secondary_guardian).phone_number}</p>
+                                <span className="font-bold text-slate-500">{student.secondary_guardian.full_name} ({student.secondary_guardian.relation || 'ولي أمر 2'})</span>
+                                <p className="text-[9px] text-cyan-600 dark:text-cyan-400 font-mono" dir="ltr">{student.secondary_guardian.phone_number}</p>
                               </div>
                             )}
                           </div>

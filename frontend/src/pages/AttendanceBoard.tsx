@@ -406,7 +406,7 @@ const AttendanceBoard: React.FC = () => {
 
                         <div>
                            <h3 className="font-black text-sm text-slate-800 dark:text-white leading-snug">{student.name}</h3>
-                           <p className="text-[10px] font-bold text-slate-400">الهوية: {student.profile?.national_id || student.profile?.identity_number || student.phone || 'مسجل بالحلقة'}</p>
+                           <p className="text-[10px] font-bold text-slate-400">الهوية: {student.national_id || student.phone || 'مسجل بالحلقة'}</p>
                         </div>
                      </div>
 
